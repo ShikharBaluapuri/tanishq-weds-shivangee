@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vercel
+chrome_temp
+edge_temp
+.DS_Store
+*.log
+*.pdf
+extracted_assets/
+
+.vercel
