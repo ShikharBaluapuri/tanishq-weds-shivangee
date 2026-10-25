@@ -28,7 +28,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#2D2424] relative font-sans">
+    <div className="min-h-screen bg-[#F4F6F3] text-[#1E2F23] relative font-sans">
       {/* 1. Wax Seal Envelope Preloader (Full screen initial experience) */}
       <WaxSealPreloader onOpenInvitation={handleOpenInvitation} />
 
