@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Clock, ChevronDown, CheckCircle2 } from 'lucide-react';
-import { GaneshaIcon, BotanicalDivider } from './BespokeIcons';
+import { BotanicalDivider, BotanicalCornerSprig } from './BespokeIcons';
 
 export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
-  // Live ticking countdown to Monday, February 15, 2027 09:00:00 IST
+  // Live countdown to Monday, February 15, 2027 09:00:00 IST (The Wedding Day)
   const TARGET_DATE = new Date('2027-02-15T09:00:00+05:30').getTime();
 
   const [timeLeft, setTimeLeft] = useState({
@@ -38,79 +38,97 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-28 pb-20 px-6 bg-[#F4F6F3] overflow-hidden bg-paper-texture">
-      {/* Background Soft Vignette */}
-      <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-[#EAEee8]/80 to-transparent pointer-events-none" />
+    <section className="relative min-h-screen flex flex-col items-center justify-center pt-28 pb-20 px-4 sm:px-6 bg-[#F5F0E5] overflow-hidden bg-paper-texture">
+      {/* Background Soft Ambient Vignette */}
+      <div className="absolute top-0 inset-x-0 h-72 bg-gradient-to-b from-[#EAE2D3]/70 to-transparent pointer-events-none" />
 
-      {/* Main Editorial Hero Card */}
+      {/* Main Luxury Printed Invitation Card */}
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-3xl bg-white/90 backdrop-blur-md rounded-3xl p-8 sm:p-14 text-center border border-[#C5A869]/30 shadow-botanical"
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-3xl bg-[#FDFBF7] rounded-3xl p-7 sm:p-14 text-center border border-[#C3A56B]/35 shadow-botanical overflow-hidden"
       >
-        {/* Subtle Line Art Ganesha & Invocation */}
-        <div className="flex flex-col items-center justify-center space-y-1.5 mb-6">
-          <GaneshaIcon className="w-9 h-9 text-[#C5A869]" />
-          <span className="font-devanagari text-[#8C7443] text-xs tracking-[0.25em] font-medium">
-            ।। श्री गणेशाय नमः ।।
-          </span>
-          <span className="font-cormorant uppercase text-[11px] tracking-[0.3em] text-[#7A917F]">
-            शुभविवाह • Auspicious Union
+        {/* Delicate Inner Stationery Border Frame */}
+        <div className="absolute inset-3 sm:inset-4 border border-[#C3A56B]/20 rounded-2xl pointer-events-none" />
+
+        {/* Faint Botanical Corner Sprigs */}
+        <div className="absolute -top-6 -right-6 sm:-top-8 sm:-right-8 pointer-events-none opacity-25 transform rotate-12 scale-90">
+          <BotanicalCornerSprig className="w-28 h-28 text-[#A4B3A1]" />
+        </div>
+        <div className="absolute -bottom-6 -left-6 sm:-bottom-8 sm:-left-8 pointer-events-none opacity-25 transform -rotate-[165deg] scale-90">
+          <BotanicalCornerSprig className="w-28 h-28 text-[#A4B3A1]" />
+        </div>
+
+        {/* Custom Monogram Heirloom Crest */}
+        <div className="flex flex-col items-center justify-center mb-4">
+          <img
+            src="/monogram_gold_transparent.png"
+            alt="Tanishq &amp; Shivangee Royal Crest"
+            className="w-16 h-20 sm:w-20 sm:h-24 object-contain filter drop-shadow-sm mb-2"
+          />
+          <h3 className="font-devanagari text-[#A78343] text-xs sm:text-sm tracking-normal font-normal">
+            ॥ श्री गणेशाय नमः ॥
+          </h3>
+          <p className="font-devanagari text-[11px] sm:text-xs text-[#657968] tracking-normal mt-0.5 max-w-md mx-auto leading-relaxed opacity-90">
+            विघ्न हरण मंगल करण, गौरी पुत्र गणेश • प्रथम निमंत्रण आपको ब्रह्मा, विष्णु, महेश
+          </p>
+          <span className="font-devanagari text-xs text-[#A78343] font-medium mt-1">
+            ॥ शुभविवाह ॥
           </span>
         </div>
 
-        {/* Grandparents & Host Lineage (Airy & understated) */}
-        <div className="max-w-xl mx-auto my-4 text-[#1E2F23]">
-          <p className="font-cormorant italic text-sm sm:text-base text-[#7A917F]">
+        {/* Grandparents & Blessings Lineage */}
+        <div className="max-w-xl mx-auto my-3 text-[#343F35]">
+          <p className="font-cormorant italic text-xs sm:text-sm text-[#657968]">
             With the divine blessings of
           </p>
-          <p className="font-cormorant uppercase tracking-[0.2em] text-xs sm:text-sm font-semibold text-[#1E2F23] mt-1">
+          <p className="font-cormorant uppercase tracking-[0.2em] text-xs sm:text-sm font-semibold text-[#343F35] mt-0.5">
             Smt. Saroj &amp; Shri G.P. Baluapuri
           </p>
-          <p className="font-cormorant uppercase tracking-[0.2em] text-xs sm:text-sm font-semibold text-[#1E2F23]">
+          <p className="font-cormorant uppercase tracking-[0.2em] text-xs sm:text-sm font-semibold text-[#343F35]">
             Smt. Ranjana &amp; Late Shri Lalit Mohan Verma
           </p>
-          <p className="font-cormorant italic text-xs sm:text-sm text-[#7A917F] mt-1">
-            we invite you to celebrate the wedding of our beloved grandson
+          <p className="font-cormorant italic text-xs sm:text-sm text-[#657968] mt-1">
+            we invite you to celebrate the auspicious wedding of our beloved grandson
           </p>
         </div>
 
-        <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C5A869]" />
+        <BotanicalDivider className="w-full max-w-xs mx-auto my-4 text-[#C3A56B]" />
 
-        {/* Couple Names Centerpiece */}
-        <div className="my-6 space-y-2">
+        {/* Couple's Names Centerpiece */}
+        <div className="my-5 space-y-1.5">
           <h2
-            style={{ fontFamily: "'Pinyon Script', 'Great Vibes', 'Alex Brush', cursive" }}
-            className="text-6xl sm:text-7xl md:text-8xl text-[#1E2F23] leading-none py-2"
+            style={{ fontFamily: "'Pinyon Script', 'Great Vibes', cursive" }}
+            className="text-6xl sm:text-7xl md:text-8xl text-[#343F35] leading-none py-1 drop-shadow-sm"
           >
-            Tanishq &amp; Shivangee
+            Tanishq <span className="font-cormorant italic text-3xl sm:text-5xl text-[#C3A56B] font-light">&amp;</span> Shivangee
           </h2>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.2em] text-[#7A917F] pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.18em] text-[#657968] pt-1">
             <span>Son of Dr. Nidhi &amp; Mr. Manish Baluapuri</span>
-            <span className="hidden sm:inline text-[#C5A869]">•</span>
+            <span className="hidden sm:inline text-[#C3A56B]">•</span>
             <span>Daughter of Mrs. Shweta &amp; Mr. Tarun Kushwah</span>
           </div>
         </div>
 
-        {/* Date & Location Pill Badge */}
-        <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-6 py-2.5 rounded-full bg-[#F4F6F3] border border-[#C5A869]/40 text-[#1E2F23] shadow-sm my-6 text-xs sm:text-sm font-cormorant uppercase tracking-[0.2em]">
+        {/* Auspicious Date & Venue Pill Badge */}
+        <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-4 px-6 py-2.5 rounded-full bg-[#EAE2D3]/60 border border-[#C3A56B]/35 text-[#343F35] shadow-sm my-5 text-xs sm:text-sm font-cormorant uppercase tracking-[0.18em]">
           <div className="flex items-center gap-1.5 font-medium">
-            <Calendar className="w-3.5 h-3.5 text-[#C5A869]" />
+            <Calendar className="w-3.5 h-3.5 text-[#C3A56B]" />
             <span>14th – 15th February 2027</span>
           </div>
-          <span className="hidden sm:inline text-[#C5A869]">•</span>
+          <span className="hidden sm:inline text-[#C3A56B]">•</span>
           <div className="flex items-center gap-1.5 font-medium">
-            <MapPin className="w-3.5 h-3.5 text-[#354F3B]" />
+            <MapPin className="w-3.5 h-3.5 text-[#41584C]" />
             <span>The Waterstone Resort, Chhindwara</span>
           </div>
         </div>
 
-        {/* Live Countdown in Stone-Linen Cards */}
-        <div className="mt-4 mb-8">
-          <div className="text-[10px] font-cormorant uppercase tracking-[0.25em] text-[#7A917F] font-semibold mb-3 flex items-center justify-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-[#C5A869]" />
+        {/* Live Wedding Countdown in Warm Paper Cards */}
+        <div className="mt-3 mb-7">
+          <div className="text-[10px] sm:text-[11px] font-cormorant uppercase tracking-[0.25em] text-[#657968] font-semibold mb-3 flex items-center justify-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[#C3A56B]" />
             <span>Counting Down to the Shubh Vivah</span>
           </div>
 
@@ -123,12 +141,12 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
             ].map((unit, idx) => (
               <div
                 key={idx}
-                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#E8E6DF]/70 border border-[#C5A869]/30 shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#EAE2D3]/80 border border-[#C3A56B]/30 shadow-sm"
               >
-                <span className="text-2xl sm:text-3xl font-cormorant font-bold text-[#1E2F23]">
+                <span className="text-2xl sm:text-3xl font-cormorant font-bold text-[#343F35]">
                   {String(unit.value).padStart(2, '0')}
                 </span>
-                <span className="text-[9px] font-sans tracking-widest uppercase text-[#7A917F] mt-0.5">
+                <span className="text-[9px] font-sans tracking-widest uppercase text-[#657968] mt-0.5">
                   {unit.label}
                 </span>
               </div>
@@ -137,34 +155,34 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
         </div>
 
         {/* Minimalist Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-1">
           <button
             onClick={onOpenRsvp}
-            className="w-full sm:w-auto px-8 py-3 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold shadow-md hover:bg-[#2A3F2F] hover:scale-105 transition-all border border-[#C5A869]/50 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold shadow-md hover:bg-[#2C3E34] hover:scale-105 transition-all border border-[#C3A56B]/40 flex items-center justify-center gap-2"
           >
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#C5A869]" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#C3A56B]" />
             <span>RSVP Joyfully</span>
           </button>
 
           <button
             onClick={onScrollToItinerary}
-            className="w-full sm:w-auto px-7 py-3 rounded-full bg-white text-[#1E2F23] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C5A869]/40 hover:bg-[#F4F6F3] transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-7 py-3 rounded-full bg-white text-[#343F35] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C3A56B]/35 hover:bg-[#EAE2D3]/40 transition-all flex items-center justify-center gap-2"
           >
             <span>The Celebrations</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#7A917F]" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#657968]" />
           </button>
         </div>
       </motion.div>
 
-      {/* Gentle Scroll Prompt */}
+      {/* Gentle Scroll Indicator */}
       <motion.div
         animate={{ y: [0, 5, 0] }}
         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="mt-8 flex flex-col items-center text-[#7A917F] text-xs cursor-pointer"
+        className="mt-8 flex flex-col items-center text-[#657968] text-xs cursor-pointer"
         onClick={onScrollToItinerary}
       >
         <span className="font-cormorant uppercase tracking-[0.2em] text-[11px]">Explore Itinerary</span>
-        <ChevronDown className="w-4 h-4 mt-1 text-[#C5A869]" />
+        <ChevronDown className="w-4 h-4 mt-1 text-[#C3A56B]" />
       </motion.div>
     </section>
   );

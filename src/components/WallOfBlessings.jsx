@@ -25,27 +25,27 @@ export default function WallOfBlessings({ onOpenBlessingModal }) {
   }, []);
 
   return (
-    <section id="blessings" className="relative py-24 px-6 bg-[#EAEee8]/50 overflow-hidden">
+    <section id="blessings" className="relative py-24 px-4 sm:px-6 bg-[#EAE2D3]/40 overflow-hidden bg-paper-texture">
       <div className="max-w-5xl mx-auto">
         
         {/* Section Title */}
         <div className="text-center mb-14">
-          <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#7A917F] font-semibold">
+          <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#657968] font-semibold">
             Aashish Vachan
           </span>
-          <h3 className="font-cormorant text-4xl sm:text-5xl font-normal text-[#1E2F23] mt-2 tracking-tight">
+          <h3 className="font-cormorant text-4xl sm:text-5xl font-normal text-[#343F35] mt-2 tracking-tight">
             Wall of Blessings
           </h3>
-          <p className="font-cormorant italic text-[#7A917F] text-base max-w-md mx-auto mt-2">
+          <p className="font-cormorant italic text-[#657968] text-base max-w-md mx-auto mt-2">
             Heartfelt prayers, blessings, and warm wishes from cherished family &amp; friends.
           </p>
-          <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C5A869]" />
+          <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C3A56B]" />
 
           <button
             onClick={onOpenBlessingModal}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/90 border border-[#C5A869]/40 text-[#1E2F23] text-xs font-cormorant uppercase tracking-[0.2em] font-medium hover:bg-[#F4F6F3] transition-all shadow-sm mt-1"
+            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/95 border border-[#C3A56B]/40 text-[#343F35] text-xs font-cormorant uppercase tracking-[0.2em] font-medium hover:bg-[#F5F0E5] transition-all shadow-sm mt-1"
           >
-            <Plus className="w-3.5 h-3.5 text-[#C5A869]" />
+            <Plus className="w-3.5 h-3.5 text-[#C3A56B]" />
             <span>Send Your Blessing</span>
           </button>
         </div>
@@ -59,31 +59,31 @@ export default function WallOfBlessings({ onOpenBlessingModal }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: (idx % 3) * 0.1 }}
-              className="bg-white/95 rounded-2xl p-6 border border-[#C5A869]/30 shadow-botanical hover:shadow-brass-glow transition-all duration-300 flex flex-col justify-between"
+              className="bg-[#FDFBF7] rounded-2xl p-6 border border-[#C3A56B]/30 shadow-botanical hover:shadow-brass-glow transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-[10px] font-sans font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#F4F6F3] text-[#7A917F]">
+                  <span className="text-[10px] font-sans font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EAE2D3]/70 text-[#657968] border border-[#C3A56B]/20">
                     {item.side || 'Well-Wisher'}
                   </span>
-                  <MessageSquareHeart className="w-3.5 h-3.5 text-[#C5A869]" />
+                  <MessageSquareHeart className="w-3.5 h-3.5 text-[#C3A56B]" />
                 </div>
 
-                <p className="font-cormorant italic text-[#1E2F23] text-sm sm:text-base leading-relaxed mb-4">
+                <p className="font-cormorant italic text-[#343F35] text-sm sm:text-base leading-relaxed mb-4">
                   “{item.blessing_message}”
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[#C5A869]/20 flex items-center justify-between">
+              <div className="pt-3 border-t border-[#C3A56B]/20 flex items-center justify-between">
                 <div>
-                  <strong className="block text-xs font-sans font-medium text-[#1E2F23]">
+                  <strong className="block text-xs font-sans font-medium text-[#343F35]">
                     {item.guest_name}
                   </strong>
-                  <span className="text-[10px] text-[#7A917F] block">
+                  <span className="text-[10px] text-[#657968] block">
                     {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Wedding Guest'}
                   </span>
                 </div>
-                <Heart className="w-3 h-3 text-[#7A917F] fill-[#7A917F]/20" />
+                <Heart className="w-3 h-3 text-[#A76D6B] fill-[#A76D6B]/20" />
               </div>
             </motion.div>
           ))}

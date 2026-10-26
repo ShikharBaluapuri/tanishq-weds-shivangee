@@ -6,98 +6,110 @@
 
 @layer base {
   :root {
-    --forest: #354F3B;
-    --forest-dark: #2A3F2F;
-    --cypress: #1E2F23;
-    --sage: #7A917F;
-    --alabaster: #F4F6F3;
-    --stone: #E8E6DF;
-    --cream: #E8E4D8;
-    --brass: #C5A869;
-    --brass-dark: #9E7E38;
+    --heritage-sage: #41584C;
+    --heritage-sage-dark: #2C3E34;
+    --heritage-sage-deep: #1E2D25;
+    --muted-green: #657968;
+    --soft-eucalyptus: #A4B3A1;
+    --antique-ivory: #F5F0E5;
+    --warm-paper: #EAE2D3;
+    --champagne-gold: #C3A56B;
+    --antique-brass: #A78343;
+    --dark-olive: #343F35;
+    --muted-rose: #A76D6B;
   }
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    background-color: #F4F6F3;
-    color: #1E2F23;
+    background-color: var(--antique-ivory);
+    color: var(--dark-olive);
   }
 
-  /* Custom Botanical Scrollbar */
+  body {
+    overflow-x: hidden;
+    background-color: var(--antique-ivory);
+    color: var(--dark-olive);
+  }
+
+  /* Custom Antique Gold Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #EAEee8;
+    background: #EAE2D3;
   }
   ::-webkit-scrollbar-thumb {
-    background: #C5A869;
+    background: #C3A56B;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #9E7E38;
+    background: #A78343;
   }
 }
 
-/* Botanical Paper & Linen Texture effect */
+/* Authentic Handmade Cotton Paper Texture */
 .bg-paper-texture {
-  background-color: #F4F6F3;
+  background-color: var(--antique-ivory);
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(197, 168, 105, 0.02) 0%, transparent 60%),
-    radial-gradient(rgba(30, 47, 35, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px;
+    radial-gradient(circle at 50% 50%, rgba(195, 165, 107, 0.03) 0%, transparent 70%),
+    radial-gradient(rgba(52, 63, 53, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px;
 }
 
-.bg-forest-gradient {
-  background: radial-gradient(circle at 50% 30%, #3B5842 0%, #354F3B 60%, #25392A 100%);
+/* Atmospheric Deep Sage Heritage Opening Canvas */
+.bg-heritage-atmosphere {
+  background: radial-gradient(circle at 50% 36%, #4A6354 0%, #41584C 50%, #293A30 85%, #1B2821 100%);
 }
 
-.bg-envelope-stone {
-  background-color: #E8E6DF;
-  background-image: radial-gradient(rgba(30, 47, 35, 0.04) 1px, transparent 0);
-  background-size: 8px 8px;
+.itinerary-section {
+  scroll-margin-top: 5.5rem;
+  background:
+    linear-gradient(180deg, rgba(234, 226, 211, 0.45) 0%, rgba(245, 240, 229, 0.98) 12%, rgba(245, 240, 229, 0.98) 88%, rgba(234, 226, 211, 0.45) 100%);
 }
 
-/* Antique Brass Foil Text Gradient */
-.text-brass-gradient {
-  background: linear-gradient(135deg, #E2CA94 0%, #C5A869 50%, #9E7E38 100%);
+.itinerary-section::before,
+.itinerary-section::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: min(90%, 54rem);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(195, 165, 107, 0.4), transparent);
+}
+
+.itinerary-section::before { top: 0; }
+.itinerary-section::after { bottom: 0; }
+
+/* Antique Gold Foil Text Gradient */
+.text-gold-foil {
+  background: linear-gradient(135deg, #EAD8A6 0%, #C3A56B 45%, #A78343 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Antique Wax Seal 3D Bevel & Shadows */
-.antique-wax-seal {
-  background: radial-gradient(circle at 38% 36%, #D6BC7E 0%, #C5A869 45%, #9E7E38 85%, #7D5F22 100%);
-  box-shadow: 
-    0 8px 20px -4px rgba(22, 36, 27, 0.4),
-    0 3px 6px -1px rgba(0, 0, 0, 0.25),
-    inset 0 1px 2px rgba(255, 255, 255, 0.6),
-    inset 0 -2px 5px rgba(60, 45, 15, 0.6);
+/* Envelope Flap 3D Perspective & Cast Shadows */
+.envelope-perspective {
+  perspective: 1400px;
 }
 
-.wax-seal-inner {
-  box-shadow: 
-    inset 0 2px 4px rgba(0, 0, 0, 0.35),
-    0 1px 2px rgba(255, 255, 255, 0.4);
+.flap-shadow {
+  filter: drop-shadow(0 12px 18px rgba(27, 40, 33, 0.22));
 }
 
-/* Glassmorphism Forest & Sage */
-.glass-forest {
-  background: rgba(37, 57, 42, 0.88);
+/* Glassmorphism Accents */
+.glass-sage {
+  background: rgba(65, 88, 76, 0.88);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(197, 168, 105, 0.25);
+  border: 1px solid rgba(195, 165, 107, 0.3);
 }
 
-.glass-alabaster {
-  background: rgba(244, 246, 243, 0.92);
+.glass-ivory {
+  background: rgba(245, 240, 229, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(197, 168, 105, 0.3);
-}
-
-/* Flap drop shadow onto lower paper */
-.flap-drop-shadow {
-  filter: drop-shadow(0 10px 14px rgba(22, 36, 27, 0.18));
+  border: 1px solid rgba(195, 165, 107, 0.3);
 }

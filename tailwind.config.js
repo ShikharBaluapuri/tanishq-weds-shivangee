@@ -7,43 +7,57 @@ export default {
   theme: {
     extend: {
       colors: {
-        botanical: {
-          forest: '#354F3B',
-          forestDark: '#2A3F2F',
-          forestDeep: '#1E2F23',
-          cypress: '#16241B',
-          sage: '#7A917F',
-          sageLight: '#DDE5DE',
-          sageMist: '#EAEee8',
-          alabaster: '#F4F6F3',
-          ivory: '#FDFBF7',
-          stone: '#E8E6DF',
-          stoneDark: '#DCD9D0',
-          cream: '#E8E4D8',
-          brass: '#C5A869',
-          brassDark: '#9E7E38',
-          brassLight: '#E2CA94',
+        // Master Ultra-Luxury Heritage Palette
+        heritage: {
+          sage: '#41584C',         // Deep Heritage Sage
+          sageDark: '#2C3E34',     // Darkened Heritage Sage
+          sageDeep: '#1E2D25',     // Forest Night Sage
+          botanical: '#657968',    // Muted Botanical Green
+          eucalyptus: '#A4B3A1',   // Soft Eucalyptus
+          ivory: '#F5F0E5',        // Antique Ivory
+          paper: '#EAE2D3',        // Warm Handmade Paper
+          gold: '#C3A56B',         // Champagne Gold
+          brass: '#A78343',        // Antique Brass
+          olive: '#343F35',        // Dark Olive Ink
+          rose: '#A76D6B',         // Muted Floral Rose
         },
-        // Graceful aliases for existing components
+        // Graceful aliases for backwards compatibility
+        botanical: {
+          forest: '#41584C',
+          forestDark: '#2C3E34',
+          forestDeep: '#1E2D25',
+          cypress: '#343F35',
+          sage: '#657968',
+          sageLight: '#A4B3A1',
+          sageMist: '#EAE2D3',
+          alabaster: '#F5F0E5',
+          ivory: '#FDFBF7',
+          stone: '#EAE2D3',
+          stoneDark: '#D8CFBF',
+          cream: '#F5F0E5',
+          brass: '#C3A56B',
+          brassDark: '#A78343',
+          brassLight: '#E0CB9B',
+        },
         royal: {
-          ivory: '#F4F6F3',
-          cream: '#EAEee8',
-          parchment: '#E8E6DF',
-          gold: '#C5A869',
-          goldLight: '#E8E4D8',
-          goldDark: '#9E7E38',
-          bronze: '#7A917F',
-          maroon: '#1E2F23',
-          maroonDark: '#16241B',
-          crimson: '#2A3F2F',
-          emerald: '#354F3B',
-          indigo: '#1E2F23',
-          haldi: '#C5A869',
-          vermilion: '#B08D44',
+          ivory: '#F5F0E5',
+          cream: '#EAE2D3',
+          parchment: '#EAE2D3',
+          gold: '#C3A56B',
+          goldLight: '#E0CB9B',
+          goldDark: '#A78343',
+          bronze: '#657968',
+          maroon: '#343F35',
+          maroonDark: '#1E2D25',
+          crimson: '#2C3E34',
+          emerald: '#41584C',
+          indigo: '#1E2D25',
+          haldi: '#C3A56B',
+          vermilion: '#A78343',
         }
       },
       fontFamily: {
-        script: ['"Pinyon Script"', '"Great Vibes"', '"Alex Brush"', 'cursive'],
+        script: ['"Pinyon Script"', '"Great Vibes"', 'cursive'],
         pinyon: ['"Pinyon Script"', 'cursive'],
         greatvibes: ['"Great Vibes"', 'cursive'],
         cormorant: ['"Cormorant Garamond"', 'Georgia', 'serif'],
@@ -63,10 +77,10 @@ export default {
         }
       },
       boxShadow: {
-        'envelope': '0 25px 50px -12px rgba(22, 36, 27, 0.25), 0 0 0 1px rgba(197, 168, 105, 0.2)',
-        'wax-seal': '0 6px 16px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.3)',
-        'botanical': '0 20px 40px -15px rgba(30, 47, 35, 0.08), 0 0 0 1px rgba(197, 168, 105, 0.2)',
-        'brass-glow': '0 0 30px rgba(197, 168, 105, 0.25)',
+        'envelope': '0 25px 60px -15px rgba(26, 38, 30, 0.4), 0 0 0 1px rgba(195, 165, 107, 0.25)',
+        'wax-seal': '0 12px 28px -4px rgba(22, 34, 26, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5), inset 0 -3px 6px rgba(50, 36, 12, 0.5)',
+        'botanical': '0 20px 45px -15px rgba(32, 45, 36, 0.08), 0 0 0 1px rgba(195, 165, 107, 0.2)',
+        'brass-glow': '0 0 35px rgba(195, 165, 107, 0.3)',
       }
     },
   },

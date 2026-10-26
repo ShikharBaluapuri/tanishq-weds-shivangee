@@ -1,3 +1,4 @@
+import { validateRsvp } from './rsvpSubmission';
 import { createClient } from '@supabase/supabase-js';
 
 // Environment variables for cloud backend
@@ -6,9 +7,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const googleSheetsWebhookUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
 
 // Initialize Supabase client if keys are present
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+let configurationError = false;
+export const supabase = (() => {
+  if (!supabaseUrl && !supabaseAnonKey) return null;
+  try {
+    if (!supabaseUrl || !supabaseAnonKey) throw new Error('Incomplete configuration');
+    return createClient(supabaseUrl, supabaseAnonKey);
+  } catch {
+    configurationError = true;
+    return null;
+  }
+})();
 
 const STORAGE_KEY = 'tanishq_shivangee_wedding_rsvps_v1';
 
@@ -144,110 +153,55 @@ export async function getAllRsvps() {
   return localData;
 }
 
-/**
- * Save new RSVP:
- * 1. Store in LocalStorage (synchronously guaranteeing offline demo functionality)
- * 2. Send to Google Sheets Webhook via fetch POST
- * 3. Send to Supabase if configured
- */
 export async function submitRsvp(formData) {
-  const newRecord = {
-    id: `rsvp-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-    guest_name: formData.guest_name.trim(),
-    phone: formData.phone.trim(),
-    side: formData.side || 'Friends & Colleagues',
-    attending: formData.attending,
-    guest_count: formData.attending === 'Regretfully Declining' ? 0 : Number(formData.guest_count || 1),
-    events_attending: formData.attending === 'Regretfully Declining' ? [] : (formData.events_attending || []),
-    arrival_info: formData.arrival_info?.trim() || 'Not specified',
-    needs_accommodation: formData.needs_accommodation || 'No',
-    blessing_message: formData.blessing_message?.trim() || '',
-    created_at: new Date().toISOString()
-  };
-
-  // 1. Save to LocalStorage
-  try {
-    const existing = await getAllRsvps();
-    const updated = [newRecord, ...existing.filter(item => item.phone !== newRecord.phone)];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('wedding_rsvp_added', { detail: newRecord }));
-  } catch (err) {
-    console.error('Failed to save to localStorage:', err);
-  }
-
-  // 2. Submit to Google Sheets Webhook
-  let googleSheetSuccess = false;
+  const newRecord = { ...validateRsvp(formData), id: crypto.randomUUID(), created_at: new Date().toISOString() };
   const webhookUrl = googleSheetsWebhookUrl || (typeof window !== 'undefined' ? window.__VITE_GOOGLE_SHEETS_WEBHOOK_URL : '');
-  
-  if (webhookUrl) {
+  const backend = supabaseUrl || supabaseAnonKey ? 'supabase' : webhookUrl ? 'googleSheets' : 'local';
+  if (configurationError) throw new Error('RSVP storage is not configured correctly. Please contact the hosts.');
+
+  if (backend !== 'local') {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const payload = {
-        timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        guest_name: newRecord.guest_name,
-        phone: newRecord.phone,
-        side: newRecord.side,
-        attending: newRecord.attending,
-        guest_count: newRecord.guest_count,
-        ganesh_poojan: newRecord.events_attending.some(e => e.includes('Ganesh')) ? 'YES' : 'NO',
-        haldi_carnival: newRecord.events_attending.some(e => e.includes('Haldi')) ? 'YES' : 'NO',
-        sangeet: newRecord.events_attending.some(e => e.includes('Sangeet')) ? 'YES' : 'NO',
-        wedding: newRecord.events_attending.some(e => e.includes('Varmala') || e.includes('Barat') || e.includes('Wedding')) ? 'YES' : 'NO',
-        arrival_info: newRecord.arrival_info,
-        needs_accommodation: newRecord.needs_accommodation,
-        blessing_message: newRecord.blessing_message
-      };
-
-      await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'no-cors', // Allows sending cross-origin requests to Google Apps Script web apps
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-      googleSheetSuccess = true;
-    } catch (sheetErr) {
-      console.warn('Google Sheets Webhook submission error:', sheetErr);
-    }
-  }
-
-  // 3. Submit to Supabase
-  let supabaseSuccess = false;
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('wedding_rsvps')
-        .insert([{
-          guest_name: newRecord.guest_name,
-          phone: newRecord.phone,
-          side: newRecord.side,
-          attending: newRecord.attending,
-          guest_count: newRecord.guest_count,
-          events_attending: newRecord.events_attending,
-          arrival_info: newRecord.arrival_info,
-          needs_accommodation: newRecord.needs_accommodation,
-          blessing_message: newRecord.blessing_message,
-          created_at: newRecord.created_at
-        }]);
-
-      if (!error) {
-        supabaseSuccess = true;
+      if (backend === 'supabase') {
+        const { error } = await supabase.from('wedding_rsvps').insert([newRecord]);
+        if (error) throw error;
       } else {
-        console.warn('Supabase insert warning:', error);
+        const url = new URL(webhookUrl);
+        if (url.protocol !== 'https:') throw new Error('Invalid webhook URL');
+        const hasEvent = pattern => newRecord.events_attending.some(e => pattern.test(e));
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          signal: controller.signal,
+          body: JSON.stringify({ ...newRecord, timestamp: newRecord.created_at,
+            ganesh_poojan: hasEvent(/Ganesh/i) ? 'YES' : 'NO',
+            haldi_carnival: hasEvent(/Haldi/i) ? 'YES' : 'NO',
+            sangeet: hasEvent(/Sangeet/i) ? 'YES' : 'NO',
+            wedding: hasEvent(/Varmala|Barat|Wedding/i) ? 'YES' : 'NO',
+          }),
+        });
+        if (!response.ok || (await response.json()).status !== 'success') throw new Error('Unconfirmed save');
       }
-    } catch (supaErr) {
-      console.warn('Supabase insert failed:', supaErr);
+    } catch {
+      throw new Error('We could not confirm your RSVP was saved. Please contact the hosts or try again.');
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
-  return {
-    success: true,
-    data: newRecord,
-    cloudSync: {
-      supabase: supabaseSuccess,
-      googleSheets: googleSheetSuccess
-    }
-  };
+  let localSaved = false;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : INITIAL_BLESSINGS;
+    const existing = Array.isArray(parsed) ? parsed : [];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([newRecord, ...existing.filter(item => item.phone !== newRecord.phone)]));
+    localSaved = true;
+  } catch {
+    if (backend === 'local') throw new Error('Unable to save your RSVP on this device. Please contact the hosts.');
+  }
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('wedding_rsvp_added', { detail: newRecord }));
+  return { success: true, data: newRecord, backend, localSaved, cloudSync: { supabase: backend === 'supabase', googleSheets: backend === 'googleSheets' } };
 }
 
 /**
