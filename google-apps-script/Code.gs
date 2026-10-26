@@ -1,93 +1,92 @@
 /**
  * ==============================================================================
- * TANISHQ & SHIVANGEE — WEDDING RSVP 2027
- * OFFICIAL GOOGLE SHEETS & GOOGLE DRIVE AUTOMATION SCRIPT
+ * TANISHQ & SHIVANGEE — OFFICIAL WEDDING RSVP AUTOMATION SCRIPT
  * ==============================================================================
  *
- * Folder:      "Tanishq & Shivangee — Wedding RSVP"
- * Spreadsheet: "Tanishq & Shivangee — Wedding RSVP 2027"
- * 
- * Exact 14 Columns:
- * 1.  RSVP ID
- * 2.  Submission Date & Time
- * 3.  Guest / Family Name
- * 4.  WhatsApp Number
- * 5.  Guest Side
- * 6.  Attendance Status
- * 7.  Number of Guests
- * 8.  Selected Wedding Functions
- * 9.  Expected Arrival Date
- * 10. Expected Arrival Time
- * 11. Wedding Blessing / Message
- * 12. Community Invitation Status
- * 13. WhatsApp Notification Status
- * 14. Last Updated
+ * Target Google Spreadsheet:
+ * URL: https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit
+ * ID:  1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y
+ * Title: "T&S Wedding RSVPs"
+ * Worksheet: "Sheet1"
  *
- * Features:
- * - Automatic folder & spreadsheet creation in authorized host's Google Drive
- * - In-place updates for legitimate edits (deduplication by RSVP ID or WhatsApp Number)
- * - Formula injection prevention (=, +, -, @ sanitized with single quote)
- * - Beautiful royal sage green header formatting (#2C3E34) with frozen header row
- * - Real-time JSON API response for backend & host dashboard synchronization
+ * Exact 16 Standardized Columns (A to P):
+ * A: RSVP ID
+ * B: Submission Date
+ * C: Submission Time
+ * D: Guest / Family Name
+ * E: WhatsApp Number
+ * F: Guest Side
+ * G: Attendance Status
+ * H: Number of Guests
+ * I: Selected Wedding Events
+ * J: Expected Arrival Date
+ * K: Expected Arrival Time
+ * L: Blessing / Message
+ * M: WhatsApp Consent
+ * N: Notification Status
+ * O: Google Sheets Sync Status
+ * P: Last Updated
+ *
+ * Core Features:
+ * 1. Binds directly to the authorized production sheet (1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y)
+ * 2. In-place deduplication: edits update the existing row instead of adding duplicates
+ * 3. Formula injection immunity: sanitizes values starting with =, +, -, or @
+ * 4. Automatic header styling: royal sage (#2C3E34), bold white text, frozen row 1
+ * 5. Concurrency control: LockService ensures parallel RSVP submissions don't collide
+ * 6. Asia/Kolkata timezone standard for date and time
  */
 
-const FOLDER_NAME = 'Tanishq & Shivangee — Wedding RSVP';
-const SHEET_NAME = 'Tanishq & Shivangee — Wedding RSVP 2027';
+const SPREADSHEET_ID = '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y';
+const WORKSHEET_NAME = 'Sheet1';
 
 const HEADERS = [
-  'RSVP ID',
-  'Submission Date & Time',
-  'Guest / Family Name',
-  'WhatsApp Number',
-  'Guest Side',
-  'Attendance Status',
-  'Number of Guests',
-  'Selected Wedding Functions',
-  'Expected Arrival Date',
-  'Expected Arrival Time',
-  'Wedding Blessing / Message',
-  'Community Invitation Status',
-  'WhatsApp Notification Status',
-  'Last Updated'
+  'RSVP ID',                     // Col A
+  'Submission Date',            // Col B
+  'Submission Time',            // Col C
+  'Guest / Family Name',        // Col D
+  'WhatsApp Number',            // Col E
+  'Guest Side',                 // Col F
+  'Attendance Status',          // Col G
+  'Number of Guests',           // Col H
+  'Selected Wedding Events',    // Col I
+  'Expected Arrival Date',      // Col J
+  'Expected Arrival Time',      // Col K
+  'Blessing / Message',         // Col L
+  'WhatsApp Consent',           // Col M
+  'Notification Status',        // Col N
+  'Google Sheets Sync Status',  // Col O
+  'Last Updated'                // Col P
 ];
 
 /**
- * Get or create the dedicated Google Drive folder
+ * Access the target spreadsheet and worksheet
  */
-function getOrCreateFolder() {
-  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
-  if (folders.hasNext()) {
-    return folders.next();
+function getTargetSheet() {
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (err) {
+    // Fallback if bound container script
+    ss = SpreadsheetApp.getActiveSpreadsheet();
   }
-  return DriveApp.createFolder(FOLDER_NAME);
-}
 
-/**
- * Get or create the dedicated RSVP Master Spreadsheet in the folder
- */
-function getOrCreateSpreadsheet() {
-  const folder = getOrCreateFolder();
-  const files = folder.getFilesByName(SHEET_NAME);
-  
-  let spreadsheet;
-  if (files.hasNext()) {
-    spreadsheet = SpreadsheetApp.open(files.next());
-  } else {
-    spreadsheet = SpreadsheetApp.create(SHEET_NAME);
-    const file = DriveApp.getFileById(spreadsheet.getId());
-    folder.addFile(file);
-    DriveApp.getRootFolder().removeFile(file);
+  if (!ss) {
+    throw new Error('Unable to open target spreadsheet with ID: ' + SPREADSHEET_ID);
   }
-  
-  let sheet = spreadsheet.getSheetByName('RSVP Records');
+
+  let sheet = ss.getSheetByName(WORKSHEET_NAME);
   if (!sheet) {
-    sheet = spreadsheet.getSheets()[0];
-    sheet.setName('RSVP Records');
+    sheet = ss.getSheets()[0];
+    try {
+      sheet.setName(WORKSHEET_NAME);
+    } catch (e) {
+      // Ignore if rename fails
+    }
   }
-  
-  // Format Header Row if empty or missing
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
+
+  // Ensure header row is set and formatted
+  if (sheet.getLastRow() === 0 || sheet.getRange(1, 1).getValue() === '') {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
     headerRange.setBackground('#2C3E34');
     headerRange.setFontColor('#FFFFFF');
@@ -95,18 +94,17 @@ function getOrCreateSpreadsheet() {
     headerRange.setFontFamily('Georgia');
     headerRange.setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
-    
-    // Auto-fit column widths
+
     for (let c = 1; c <= HEADERS.length; c++) {
       sheet.autoResizeColumn(c);
     }
   }
-  
+
   return sheet;
 }
 
 /**
- * Sanitize cell value against spreadsheet formula injection
+ * Formula injection prevention
  */
 function sanitizeCell(val) {
   if (val === null || val === undefined) return '';
@@ -118,17 +116,16 @@ function sanitizeCell(val) {
 }
 
 /**
- * Main Webhook POST Handler
+ * Main Webhook POST handler
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  // Wait up to 30s to prevent concurrent write collisions
   try {
     lock.waitLock(30000);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
-      error: 'Spreadsheet write lock timeout: ' + err.message
+      error: 'Lock acquisition timeout: ' + err.message
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -144,90 +141,96 @@ function doPost(e) {
       payload = e.parameter;
     }
 
-    const sheet = getOrCreateSpreadsheet();
+    const sheet = getTargetSheet();
     const data = sheet.getDataRange().getValues();
+
+    // Field normalization
+    const rsvpId = sanitizeCell(payload.rsvp_id || ('RSVP-2027-' + Date.now().toString(36).toUpperCase()));
     
-    // Extract standardized fields
-    const rsvpId = sanitizeCell(payload.rsvp_id || payload.id || ('RSVP-' + Date.now().toString(36).toUpperCase()));
-    const timestampIST = sanitizeCell(payload.submitted_at || payload.timestamp || Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm a'));
+    const now = new Date();
+    const defaultDate = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy');
+    const defaultTime = Utilities.formatDate(now, 'Asia/Kolkata', 'hh:mm a') + ' IST';
+    
+    const submissionDate = sanitizeCell(payload.submission_date || payload.submitted_date || defaultDate);
+    const submissionTime = sanitizeCell(payload.submission_time || payload.submitted_time || defaultTime);
     const guestName = sanitizeCell(payload.guest_name || '');
-    
-    // Phone normalization (ensure text format with single quote)
-    let rawPhone = String(payload.phone || '').trim();
-    if (rawPhone.startsWith('+')) rawPhone = rawPhone.substring(1);
-    rawPhone = rawPhone.replace(/\D/g, '');
+
+    // Format phone as clean string with single quote prefix
+    let rawPhone = String(payload.phone || payload.raw_phone || '').replace(/\D/g, '');
     const phone = "'" + rawPhone;
-    
+
     const side = sanitizeCell(payload.side || 'Friends & Colleagues');
     const attending = sanitizeCell(payload.attending || 'Joyfully Attending');
     const guestCount = attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1);
-    
-    // Functions
-    let functions = '';
+
+    let events = '';
     if (Array.isArray(payload.events_attending)) {
-      functions = sanitizeCell(payload.events_attending.join('; '));
+      events = sanitizeCell(payload.events_attending.join('; '));
     } else {
-      functions = sanitizeCell(payload.events_attending || payload.functions || (attending === 'Joyfully Attending' ? 'All Functions' : 'None'));
+      events = sanitizeCell(payload.events_attending || payload.events || (attending === 'Joyfully Attending' ? 'All Wedding Functions' : 'None'));
     }
-    
+
     const arrivalDate = sanitizeCell(payload.arrival_date || (attending === 'Joyfully Attending' ? '14 February 2027' : 'Not Attending'));
     const arrivalTime = sanitizeCell(payload.arrival_time || (attending === 'Joyfully Attending' ? '10:30 AM' : ''));
     const blessing = sanitizeCell(payload.blessing_message || '');
-    const communityStatus = sanitizeCell(payload.community_invite_status || (payload.community_consent ? 'Invitation Available' : 'Not Opted In'));
-    const whatsappStatus = sanitizeCell(payload.whatsapp_notify_status || 'Pending Manual Dispatch');
-    const lastUpdated = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a');
+    const consent = sanitizeCell(payload.whatsapp_consent || (payload.community_consent ? 'Opted In' : 'Not Opted In'));
+    const notificationStatus = sanitizeCell(payload.notification_status || payload.whatsapp_notify_status || 'Pending Manual Dispatch');
+    const syncStatus = 'Synced';
+    const lastUpdated = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST';
 
     const rowValues = [
-      rsvpId,
-      timestampIST,
-      guestName,
-      phone,
-      side,
-      attending,
-      guestCount,
-      functions,
-      arrivalDate,
-      arrivalTime,
-      blessing,
-      communityStatus,
-      whatsappStatus,
-      lastUpdated
+      rsvpId,             // Col A
+      submissionDate,     // Col B
+      submissionTime,     // Col C
+      guestName,          // Col D
+      phone,              // Col E
+      side,               // Col F
+      attending,          // Col G
+      guestCount,         // Col H
+      events,             // Col I
+      arrivalDate,        // Col J
+      arrivalTime,        // Col K
+      blessing,           // Col L
+      consent,            // Col M
+      notificationStatus, // Col N
+      syncStatus,         // Col O
+      lastUpdated         // Col P
     ];
 
-    // Find existing row by RSVP ID (col 1, index 0) OR Phone (col 4, index 3)
-    let existingRowIndex = -1;
+    // Deduplication check by RSVP ID (col A, index 0) or Phone (col E, index 4)
+    let targetRowIndex = -1;
     for (let i = 1; i < data.length; i++) {
       const rowRsvpId = String(data[i][0] || '').trim();
-      const rowPhone = String(data[i][3] || '').replace(/\D/g, '');
-      
+      const rowPhone = String(data[i][4] || '').replace(/\D/g, '');
+
       if ((rsvpId && rowRsvpId === rsvpId) || (rawPhone && rowPhone === rawPhone)) {
-        existingRowIndex = i + 1; // 1-indexed sheet row
+        targetRowIndex = i + 1;
         break;
       }
     }
 
     let action = 'inserted';
-    if (existingRowIndex > 0) {
-      // Preserve original RSVP ID and creation timestamp if present
-      if (data[existingRowIndex - 1][0]) {
-        rowValues[0] = data[existingRowIndex - 1][0];
-      }
-      if (data[existingRowIndex - 1][1]) {
-        rowValues[1] = data[existingRowIndex - 1][1];
-      }
-      
-      sheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    if (targetRowIndex > 0) {
+      // Preserve original RSVP ID and original submission date & time
+      if (data[targetRowIndex - 1][0]) rowValues[0] = data[targetRowIndex - 1][0];
+      if (data[targetRowIndex - 1][1]) rowValues[1] = data[targetRowIndex - 1][1];
+      if (data[targetRowIndex - 1][2]) rowValues[2] = data[targetRowIndex - 1][2];
+
+      sheet.getRange(targetRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
       action = 'updated';
     } else {
       sheet.appendRow(rowValues);
+      targetRowIndex = sheet.getLastRow();
     }
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       action: action,
       rsvp_id: rowValues[0],
+      row: targetRowIndex,
+      spreadsheet_id: SPREADSHEET_ID,
+      worksheet: WORKSHEET_NAME,
       guest_name: guestName,
-      row: existingRowIndex > 0 ? existingRowIndex : sheet.getLastRow(),
       timestamp: lastUpdated
     })).setMimeType(ContentService.MimeType.JSON);
 
@@ -242,20 +245,19 @@ function doPost(e) {
 }
 
 /**
- * Diagnostic GET endpoint to test connectivity & verify columns
+ * Diagnostic GET endpoint
  */
 function doGet(e) {
   try {
-    const sheet = getOrCreateSpreadsheet();
+    const sheet = getTargetSheet();
     return ContentService.createTextOutput(JSON.stringify({
       status: 'online',
-      spreadsheet_name: SHEET_NAME,
-      folder_name: FOLDER_NAME,
-      spreadsheet_id: sheet.getParent().getId(),
+      spreadsheet_id: SPREADSHEET_ID,
+      worksheet: WORKSHEET_NAME,
       columns_configured: HEADERS.length,
       headers: HEADERS,
       total_records: Math.max(0, sheet.getLastRow() - 1),
-      timestamp: Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a')
+      timestamp: Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST'
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({

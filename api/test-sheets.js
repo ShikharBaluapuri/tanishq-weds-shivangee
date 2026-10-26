@@ -26,23 +26,24 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
 
+    const now = new Date();
     const testPayload = {
-      submission_id: 'test-ping-' + Date.now(),
-      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-      guest_name: 'System Diagnostic Test',
+      rsvp_id: 'test-ping-' + Date.now(),
+      submission_date: now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'long', year: 'numeric' }),
+      submission_time: now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST',
+      guest_name: 'Diagnostic Connection Test',
       phone: "'9999999999",
       side: 'Hosts Connection Test',
       attending: 'Joyfully Attending',
       guest_count: 1,
+      events_attending: 'All Wedding Functions',
       arrival_date: '14 February 2027',
       arrival_time: '10:00 AM',
       blessing_message: 'Testing Google Sheet RSVP Connection for Tanishq & Shivangee',
-      ganesh_poojan: 'YES',
-      haldi_carnival: 'YES',
-      sangeet: 'YES',
-      wedding: 'YES',
-      arrival_info: 'Diagnostic Test',
-      needs_accommodation: 'No'
+      whatsapp_consent: 'Opted In',
+      notification_status: 'Diagnostic Ping',
+      sheets_sync_status: 'Synced',
+      last_updated: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
     };
 
     const response = await fetch(webhookUrl, {

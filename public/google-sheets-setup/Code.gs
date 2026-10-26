@@ -1,59 +1,77 @@
 /**
- * TANISHQ & SHIVANGEE — WEDDING RSVP 2027
- * OFFICIAL GOOGLE SHEETS & GOOGLE DRIVE AUTOMATION SCRIPT
+ * ==============================================================================
+ * TANISHQ & SHIVANGEE — OFFICIAL WEDDING RSVP AUTOMATION SCRIPT
+ * ==============================================================================
  *
- * Folder:      "Tanishq & Shivangee — Wedding RSVP"
- * Spreadsheet: "Tanishq & Shivangee — Wedding RSVP 2027"
+ * Target Google Spreadsheet:
+ * URL: https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit
+ * ID:  1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y
+ * Title: "T&S Wedding RSVPs"
+ * Worksheet: "Sheet1"
+ *
+ * Exact 16 Standardized Columns (A to P):
+ * A: RSVP ID
+ * B: Submission Date
+ * C: Submission Time
+ * D: Guest / Family Name
+ * E: WhatsApp Number
+ * F: Guest Side
+ * G: Attendance Status
+ * H: Number of Guests
+ * I: Selected Wedding Events
+ * J: Expected Arrival Date
+ * K: Expected Arrival Time
+ * L: Blessing / Message
+ * M: WhatsApp Consent
+ * N: Notification Status
+ * O: Google Sheets Sync Status
+ * P: Last Updated
  */
 
-const FOLDER_NAME = 'Tanishq & Shivangee — Wedding RSVP';
-const SHEET_NAME = 'Tanishq & Shivangee — Wedding RSVP 2027';
+const SPREADSHEET_ID = '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y';
+const WORKSHEET_NAME = 'Sheet1';
 
 const HEADERS = [
-  'RSVP ID',
-  'Submission Date & Time',
-  'Guest / Family Name',
-  'WhatsApp Number',
-  'Guest Side',
-  'Attendance Status',
-  'Number of Guests',
-  'Selected Wedding Functions',
-  'Expected Arrival Date',
-  'Expected Arrival Time',
-  'Wedding Blessing / Message',
-  'Community Invitation Status',
-  'WhatsApp Notification Status',
-  'Last Updated'
+  'RSVP ID',                     // Col A
+  'Submission Date',            // Col B
+  'Submission Time',            // Col C
+  'Guest / Family Name',        // Col D
+  'WhatsApp Number',            // Col E
+  'Guest Side',                 // Col F
+  'Attendance Status',          // Col G
+  'Number of Guests',           // Col H
+  'Selected Wedding Events',    // Col I
+  'Expected Arrival Date',      // Col J
+  'Expected Arrival Time',      // Col K
+  'Blessing / Message',         // Col L
+  'WhatsApp Consent',           // Col M
+  'Notification Status',        // Col N
+  'Google Sheets Sync Status',  // Col O
+  'Last Updated'                // Col P
 ];
 
-function getOrCreateFolder() {
-  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
-  if (folders.hasNext()) return folders.next();
-  return DriveApp.createFolder(FOLDER_NAME);
-}
+function getTargetSheet() {
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (err) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
 
-function getOrCreateSpreadsheet() {
-  const folder = getOrCreateFolder();
-  const files = folder.getFilesByName(SHEET_NAME);
-  
-  let spreadsheet;
-  if (files.hasNext()) {
-    spreadsheet = SpreadsheetApp.open(files.next());
-  } else {
-    spreadsheet = SpreadsheetApp.create(SHEET_NAME);
-    const file = DriveApp.getFileById(spreadsheet.getId());
-    folder.addFile(file);
-    DriveApp.getRootFolder().removeFile(file);
+  if (!ss) {
+    throw new Error('Unable to open target spreadsheet with ID: ' + SPREADSHEET_ID);
   }
-  
-  let sheet = spreadsheet.getSheetByName('RSVP Records');
+
+  let sheet = ss.getSheetByName(WORKSHEET_NAME);
   if (!sheet) {
-    sheet = spreadsheet.getSheets()[0];
-    sheet.setName('RSVP Records');
+    sheet = ss.getSheets()[0];
+    try {
+      sheet.setName(WORKSHEET_NAME);
+    } catch (e) {}
   }
-  
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
+
+  if (sheet.getLastRow() === 0 || sheet.getRange(1, 1).getValue() === '') {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
     headerRange.setBackground('#2C3E34');
     headerRange.setFontColor('#FFFFFF');
@@ -61,16 +79,21 @@ function getOrCreateSpreadsheet() {
     headerRange.setFontFamily('Georgia');
     headerRange.setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
-    for (let c = 1; c <= HEADERS.length; c++) sheet.autoResizeColumn(c);
+
+    for (let c = 1; c <= HEADERS.length; c++) {
+      sheet.autoResizeColumn(c);
+    }
   }
-  
+
   return sheet;
 }
 
 function sanitizeCell(val) {
   if (val === null || val === undefined) return '';
   const str = String(val).trim();
-  if (/^[=+\-@]/.test(str)) return "'" + str;
+  if (/^[=+\-@]/.test(str)) {
+    return "'" + str;
+  }
   return str;
 }
 
@@ -81,7 +104,7 @@ function doPost(e) {
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
-      error: 'Spreadsheet write lock timeout: ' + err.message
+      error: 'Lock acquisition timeout: ' + err.message
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -97,80 +120,77 @@ function doPost(e) {
       payload = e.parameter;
     }
 
-    const sheet = getOrCreateSpreadsheet();
+    const sheet = getTargetSheet();
     const data = sheet.getDataRange().getValues();
+
+    const rsvpId = sanitizeCell(payload.rsvp_id || ('RSVP-2027-' + Date.now().toString(36).toUpperCase()));
+    const now = new Date();
+    const defaultDate = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy');
+    const defaultTime = Utilities.formatDate(now, 'Asia/Kolkata', 'hh:mm a') + ' IST';
     
-    const rsvpId = sanitizeCell(payload.rsvp_id || payload.id || ('RSVP-' + Date.now().toString(36).toUpperCase()));
-    const timestampIST = sanitizeCell(payload.submitted_at || payload.timestamp || Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm a'));
+    const submissionDate = sanitizeCell(payload.submission_date || payload.submitted_date || defaultDate);
+    const submissionTime = sanitizeCell(payload.submission_time || payload.submitted_time || defaultTime);
     const guestName = sanitizeCell(payload.guest_name || '');
-    
-    let rawPhone = String(payload.phone || '').trim();
-    if (rawPhone.startsWith('+')) rawPhone = rawPhone.substring(1);
-    rawPhone = rawPhone.replace(/\D/g, '');
+
+    let rawPhone = String(payload.phone || payload.raw_phone || '').replace(/\D/g, '');
     const phone = "'" + rawPhone;
-    
+
     const side = sanitizeCell(payload.side || 'Friends & Colleagues');
     const attending = sanitizeCell(payload.attending || 'Joyfully Attending');
     const guestCount = attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1);
-    
-    let functions = '';
+
+    let events = '';
     if (Array.isArray(payload.events_attending)) {
-      functions = sanitizeCell(payload.events_attending.join('; '));
+      events = sanitizeCell(payload.events_attending.join('; '));
     } else {
-      functions = sanitizeCell(payload.events_attending || payload.functions || (attending === 'Joyfully Attending' ? 'All Functions' : 'None'));
+      events = sanitizeCell(payload.events_attending || payload.events || (attending === 'Joyfully Attending' ? 'All Wedding Functions' : 'None'));
     }
-    
+
     const arrivalDate = sanitizeCell(payload.arrival_date || (attending === 'Joyfully Attending' ? '14 February 2027' : 'Not Attending'));
     const arrivalTime = sanitizeCell(payload.arrival_time || (attending === 'Joyfully Attending' ? '10:30 AM' : ''));
     const blessing = sanitizeCell(payload.blessing_message || '');
-    const communityStatus = sanitizeCell(payload.community_invite_status || (payload.community_consent ? 'Invitation Available' : 'Not Opted In'));
-    const whatsappStatus = sanitizeCell(payload.whatsapp_notify_status || 'Pending Manual Dispatch');
-    const lastUpdated = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a');
+    const consent = sanitizeCell(payload.whatsapp_consent || (payload.community_consent ? 'Opted In' : 'Not Opted In'));
+    const notificationStatus = sanitizeCell(payload.notification_status || payload.whatsapp_notify_status || 'Pending Manual Dispatch');
+    const syncStatus = 'Synced';
+    const lastUpdated = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST';
 
     const rowValues = [
-      rsvpId,
-      timestampIST,
-      guestName,
-      phone,
-      side,
-      attending,
-      guestCount,
-      functions,
-      arrivalDate,
-      arrivalTime,
-      blessing,
-      communityStatus,
-      whatsappStatus,
-      lastUpdated
+      rsvpId, submissionDate, submissionTime, guestName, phone, side, attending, guestCount,
+      events, arrivalDate, arrivalTime, blessing, consent, notificationStatus, syncStatus, lastUpdated
     ];
 
-    let existingRowIndex = -1;
+    let targetRowIndex = -1;
     for (let i = 1; i < data.length; i++) {
       const rowRsvpId = String(data[i][0] || '').trim();
-      const rowPhone = String(data[i][3] || '').replace(/\D/g, '');
-      
+      const rowPhone = String(data[i][4] || '').replace(/\D/g, '');
+
       if ((rsvpId && rowRsvpId === rsvpId) || (rawPhone && rowPhone === rawPhone)) {
-        existingRowIndex = i + 1;
+        targetRowIndex = i + 1;
         break;
       }
     }
 
     let action = 'inserted';
-    if (existingRowIndex > 0) {
-      if (data[existingRowIndex - 1][0]) rowValues[0] = data[existingRowIndex - 1][0];
-      if (data[existingRowIndex - 1][1]) rowValues[1] = data[existingRowIndex - 1][1];
-      sheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    if (targetRowIndex > 0) {
+      if (data[targetRowIndex - 1][0]) rowValues[0] = data[targetRowIndex - 1][0];
+      if (data[targetRowIndex - 1][1]) rowValues[1] = data[targetRowIndex - 1][1];
+      if (data[targetRowIndex - 1][2]) rowValues[2] = data[targetRowIndex - 1][2];
+
+      sheet.getRange(targetRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
       action = 'updated';
     } else {
       sheet.appendRow(rowValues);
+      targetRowIndex = sheet.getLastRow();
     }
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       action: action,
       rsvp_id: rowValues[0],
+      row: targetRowIndex,
+      spreadsheet_id: SPREADSHEET_ID,
+      worksheet: WORKSHEET_NAME,
       guest_name: guestName,
-      row: existingRowIndex > 0 ? existingRowIndex : sheet.getLastRow(),
       timestamp: lastUpdated
     })).setMimeType(ContentService.MimeType.JSON);
 
@@ -186,16 +206,15 @@ function doPost(e) {
 
 function doGet(e) {
   try {
-    const sheet = getOrCreateSpreadsheet();
+    const sheet = getTargetSheet();
     return ContentService.createTextOutput(JSON.stringify({
       status: 'online',
-      spreadsheet_name: SHEET_NAME,
-      folder_name: FOLDER_NAME,
-      spreadsheet_id: sheet.getParent().getId(),
+      spreadsheet_id: SPREADSHEET_ID,
+      worksheet: WORKSHEET_NAME,
       columns_configured: HEADERS.length,
       headers: HEADERS,
       total_records: Math.max(0, sheet.getLastRow() - 1),
-      timestamp: Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a')
+      timestamp: Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST'
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({

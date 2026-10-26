@@ -140,8 +140,10 @@ export default async function handler(req, res) {
       whatsappAutomatedConfigured: Boolean(metaToken && metaPhoneId),
       whatsappCommunityConfigured: Boolean(communityUrl),
       whatsappCommunityUrl: communityUrl,
-      spreadsheetName: 'Tanishq & Shivangee — Wedding RSVP 2027',
-      driveFolderName: 'Tanishq & Shivangee — Wedding RSVP'
+      spreadsheetName: 'T&S Wedding RSVPs',
+      spreadsheetId: '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y',
+      spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit',
+      worksheetName: 'Sheet1'
     }
   });
 }

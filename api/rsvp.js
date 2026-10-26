@@ -183,10 +183,26 @@ export default async function handler(req, res) {
   // Target Family Recipient
   const familyRecipient = getFamilyRecipient(side);
 
+  const now = new Date();
+  const submissionDate = existingRecord?.submission_date || now.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  const submissionTime = existingRecord?.submission_time || now.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }) + ' IST';
+
   const record = {
     id: submission_id,
     submission_id,
     rsvp_id,
+    submission_date: submissionDate,
+    submission_time: submissionTime,
     submitted_at: timestampIST,
     last_updated: lastUpdatedIST,
     guest_name,
@@ -209,10 +225,11 @@ export default async function handler(req, res) {
     created_at: existingRecord?.created_at || new Date().toISOString()
   };
 
-  // 1. Google Sheets Payload conforming to the exact 14 columns
+  // 1. Google Sheets Payload conforming to the exact 16 columns (A to P)
   const sheetPayload = {
     rsvp_id: record.rsvp_id,
-    submitted_at: record.submitted_at,
+    submission_date: record.submission_date,
+    submission_time: record.submission_time,
     guest_name: record.guest_name,
     phone: record.phone,
     side: record.side,
@@ -222,8 +239,9 @@ export default async function handler(req, res) {
     arrival_date: record.arrival_date,
     arrival_time: record.arrival_time,
     blessing_message: record.blessing_message,
-    community_invite_status: record.community_invite_status === 'invitation_available' ? 'Invitation Available' : (record.community_consent ? 'Opted In' : 'Not Opted In'),
-    whatsapp_notify_status: 'Pending Manual Dispatch',
+    whatsapp_consent: record.community_consent ? 'Opted In' : 'Not Opted In',
+    notification_status: 'Pending Manual Dispatch',
+    sheets_sync_status: 'Synced',
     last_updated: record.last_updated
   };
 

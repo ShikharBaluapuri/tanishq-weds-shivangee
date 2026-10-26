@@ -94,9 +94,11 @@ export default async function handler(req, res) {
     // 1. Retry Google Sheets
     if ((action === 'sheets' || action === 'all') && !sheetsSuccess && webhookUrl) {
       try {
+        const now = new Date();
         const sheetPayload = {
           rsvp_id: record.rsvp_id,
-          submitted_at: record.submitted_at,
+          submission_date: record.submission_date || now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'long', year: 'numeric' }),
+          submission_time: record.submission_time || now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST',
           guest_name: record.guest_name,
           phone: record.phone,
           side: record.side,
@@ -106,9 +108,10 @@ export default async function handler(req, res) {
           arrival_date: record.arrival_date,
           arrival_time: record.arrival_time,
           blessing_message: record.blessing_message,
-          community_invite_status: record.community_invite_status,
-          whatsapp_notify_status: record.whatsapp_notify_status,
-          last_updated: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+          whatsapp_consent: record.community_consent ? 'Opted In' : 'Not Opted In',
+          notification_status: record.whatsapp_notify_status === 'sent' ? 'Delivered' : 'Pending Manual Dispatch',
+          sheets_sync_status: 'Synced',
+          last_updated: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
         };
 
         const sheetRes = await fetch(webhookUrl, {

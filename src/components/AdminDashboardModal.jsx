@@ -60,8 +60,10 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     whatsappAutomatedConfigured: false,
     whatsappCommunityConfigured: false,
     whatsappCommunityUrl: '',
-    spreadsheetName: 'Tanishq & Shivangee — Wedding RSVP 2027',
-    driveFolderName: 'Tanishq & Shivangee — Wedding RSVP'
+    spreadsheetName: 'T&S Wedding RSVPs',
+    spreadsheetId: '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y',
+    spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit',
+    worksheetName: 'Sheet1'
   });
 
   // Filter States
@@ -77,7 +79,7 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     return localStorage.getItem('wedding_friends_recipient') || '+91 9425006278';
   });
   const [sheetsUrl, setSheetsUrl] = useState(() => {
-    return localStorage.getItem('wedding_google_sheet_url') || import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
+    return localStorage.getItem('wedding_google_sheet_url') || import.meta.env.VITE_GOOGLE_SHEETS_URL || 'https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit';
   });
 
   const [copiedCode, setCopiedCode] = useState('');
@@ -255,28 +257,32 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
 
   const metrics = calculateHeadcountMetrics(rsvps);
 
-  // CSV Export logic
+  // CSV Export logic conforming to the 16 production columns (A to P)
   const exportToCsv = () => {
     const headers = [
       'RSVP ID',
-      'Submission Date & Time',
+      'Submission Date',
+      'Submission Time',
       'Guest / Family Name',
       'WhatsApp Number',
       'Guest Side',
       'Attendance Status',
       'Number of Guests',
-      'Selected Wedding Functions',
+      'Selected Wedding Events',
       'Expected Arrival Date',
       'Expected Arrival Time',
-      'Wedding Blessing / Message',
-      'Community Invitation Status',
-      'WhatsApp Notification Status',
+      'Blessing / Message',
+      'WhatsApp Consent',
+      'Notification Status',
+      'Google Sheets Sync Status',
       'Last Updated'
     ];
 
+    const now = new Date();
     const rows = filteredGuests.map(g => [
       `"${g.rsvp_id || g.submission_id || g.id || ''}"`,
-      `"${g.submitted_at || (g.created_at ? new Date(g.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '')}"`,
+      `"${g.submission_date || (g.submitted_at ? g.submitted_at.split(',')[0].trim() : now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'long', year: 'numeric' }))}"`,
+      `"${g.submission_time || (g.submitted_at ? g.submitted_at.split(',')[1]?.trim() : now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST')}"`,
       `"${(g.guest_name || '').replace(/"/g, '""')}"`,
       `"${g.phone || ''}"`,
       `"${g.side || ''}"`,
@@ -286,16 +292,17 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
       `"${g.arrival_date || ''}"`,
       `"${g.arrival_time || ''}"`,
       `"${(g.blessing_message || '').replace(/"/g, '""')}"`,
-      `"${g.community_invite_status || (g.community_consent ? 'Invitation Available' : 'Not Opted In')}"`,
-      `"${g.whatsapp_notify_status || 'Pending Manual Dispatch'}"`,
-      `"${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}"`
+      `"${g.community_consent ? 'Opted In' : 'Not Opted In'}"`,
+      `"${g.whatsapp_notify_status === 'sent' ? 'Delivered' : 'Pending Manual Dispatch'}"`,
+      `"${g.sheets_sync_status === 'synced' ? 'Synced' : 'Pending Sync'}"`,
+      `"${g.last_updated || now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `Tanishq_Shivangee_Wedding_RSVP_2027_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `TS_Wedding_RSVPs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -315,31 +322,31 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
 
   // Google Apps Script code matching google-apps-script/Code.gs
   const GOOGLE_SCRIPT_CODE = `/**
- * TANISHQ & SHIVANGEE — WEDDING RSVP 2027
- * OFFICIAL GOOGLE SHEETS & GOOGLE DRIVE AUTOMATION SCRIPT
+ * TANISHQ & SHIVANGEE — OFFICIAL WEDDING RSVP AUTOMATION SCRIPT
  *
- * Folder:      "Tanishq & Shivangee — Wedding RSVP"
- * Spreadsheet: "Tanishq & Shivangee — Wedding RSVP 2027"
- * 
- * Exact 14 Columns:
- * 1. RSVP ID  2. Submission Date & Time  3. Guest / Family Name
- * 4. WhatsApp Number  5. Guest Side  6. Attendance Status
- * 7. Number of Guests  8. Selected Wedding Functions
- * 9. Expected Arrival Date  10. Expected Arrival Time
- * 11. Wedding Blessing / Message  12. Community Invitation Status
- * 13. WhatsApp Notification Status  14. Last Updated
+ * Target Spreadsheet:
+ * URL: https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit
+ * ID:  1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y
+ * Title: "T&S Wedding RSVPs"
+ * Worksheet: "Sheet1"
+ *
+ * Exact 16 Columns (A to P):
+ * A: RSVP ID  B: Submission Date  C: Submission Time  D: Guest / Family Name
+ * E: WhatsApp Number  F: Guest Side  G: Attendance Status  H: Number of Guests
+ * I: Selected Wedding Events  J: Expected Arrival Date  K: Expected Arrival Time
+ * L: Blessing / Message  M: WhatsApp Consent  N: Notification Status
+ * O: Google Sheets Sync Status  P: Last Updated
  */
 
-const FOLDER_NAME = 'Tanishq & Shivangee — Wedding RSVP';
-const SHEET_NAME = 'Tanishq & Shivangee — Wedding RSVP 2027';
+const SPREADSHEET_ID = '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y';
+const WORKSHEET_NAME = 'Sheet1';
 
 const HEADERS = [
-  'RSVP ID', 'Submission Date & Time', 'Guest / Family Name',
-  'WhatsApp Number', 'Guest Side', 'Attendance Status',
-  'Number of Guests', 'Selected Wedding Functions',
-  'Expected Arrival Date', 'Expected Arrival Time',
-  'Wedding Blessing / Message', 'Community Invitation Status',
-  'WhatsApp Notification Status', 'Last Updated'
+  'RSVP ID', 'Submission Date', 'Submission Time', 'Guest / Family Name',
+  'WhatsApp Number', 'Guest Side', 'Attendance Status', 'Number of Guests',
+  'Selected Wedding Events', 'Expected Arrival Date', 'Expected Arrival Time',
+  'Blessing / Message', 'WhatsApp Consent', 'Notification Status',
+  'Google Sheets Sync Status', 'Last Updated'
 ];
 
 function sanitizeCell(val) {
@@ -348,27 +355,22 @@ function sanitizeCell(val) {
   return /^[=+\\-@]/.test(str) ? "'" + str : str;
 }
 
-function getOrCreateFolder() {
-  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
-  return folders.hasNext() ? folders.next() : DriveApp.createFolder(FOLDER_NAME);
-}
-
-function getOrCreateSpreadsheet() {
-  const folder = getOrCreateFolder();
-  const files = folder.getFilesByName(SHEET_NAME);
-  let ss = files.hasNext() ? SpreadsheetApp.open(files.next()) : SpreadsheetApp.create(SHEET_NAME);
-  if (!files.hasNext()) {
-    const file = DriveApp.getFileById(ss.getId());
-    folder.addFile(file);
-    DriveApp.getRootFolder().removeFile(file);
+function getTargetSheet() {
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (err) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
   }
-  let sheet = ss.getSheetByName('RSVP Records') || ss.getSheets()[0];
-  sheet.setName('RSVP Records');
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
-    const range = sheet.getRange(1, 1, 1, HEADERS.length);
-    range.setBackground('#2C3E34').setFontColor('#FFFFFF').setFontWeight('bold');
+  let sheet = ss.getSheetByName(WORKSHEET_NAME) || ss.getSheets()[0];
+  if (sheet.getLastRow() === 0 || sheet.getRange(1, 1).getValue() === '') {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length)
+      .setBackground('#2C3E34')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold');
     sheet.setFrozenRows(1);
+    for (let c = 1; c <= HEADERS.length; c++) sheet.autoResizeColumn(c);
   }
   return sheet;
 }
@@ -378,34 +380,36 @@ function doPost(e) {
   lock.waitLock(30000);
   try {
     const payload = JSON.parse(e.postData.contents);
-    const sheet = getOrCreateSpreadsheet();
+    const sheet = getTargetSheet();
     const data = sheet.getDataRange().getValues();
-    
-    const rsvpId = sanitizeCell(payload.rsvp_id || 'RSVP-' + Date.now().toString(36).toUpperCase());
+
+    const rsvpId = sanitizeCell(payload.rsvp_id || 'RSVP-2027-' + Date.now().toString(36).toUpperCase());
+    const now = new Date();
+    const subDate = sanitizeCell(payload.submission_date || Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy'));
+    const subTime = sanitizeCell(payload.submission_time || Utilities.formatDate(now, 'Asia/Kolkata', 'hh:mm a') + ' IST');
+    const guestName = sanitizeCell(payload.guest_name);
     const rawPhone = String(payload.phone || '').replace(/\\D/g, '');
     const phone = "'" + rawPhone;
-    
+    const side = sanitizeCell(payload.side || 'Friends & Colleagues');
+    const attending = sanitizeCell(payload.attending || 'Joyfully Attending');
+    const count = attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1);
+    const events = sanitizeCell(Array.isArray(payload.events_attending) ? payload.events_attending.join('; ') : payload.events_attending);
+    const arrDate = sanitizeCell(payload.arrival_date || '');
+    const arrTime = sanitizeCell(payload.arrival_time || '');
+    const blessing = sanitizeCell(payload.blessing_message || '');
+    const consent = sanitizeCell(payload.whatsapp_consent || (payload.community_consent ? 'Opted In' : 'Not Opted In'));
+    const notif = sanitizeCell(payload.notification_status || 'Pending Manual Dispatch');
+    const sync = 'Synced';
+    const lastUp = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST';
+
     const rowValues = [
-      rsvpId,
-      sanitizeCell(payload.submitted_at || Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm a')),
-      sanitizeCell(payload.guest_name),
-      phone,
-      sanitizeCell(payload.side || 'Friends & Colleagues'),
-      sanitizeCell(payload.attending || 'Joyfully Attending'),
-      payload.attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1),
-      sanitizeCell(Array.isArray(payload.events_attending) ? payload.events_attending.join('; ') : payload.events_attending),
-      sanitizeCell(payload.arrival_date || ''),
-      sanitizeCell(payload.arrival_time || ''),
-      sanitizeCell(payload.blessing_message || ''),
-      sanitizeCell(payload.community_invite_status || (payload.community_consent ? 'Invitation Available' : 'Not Opted In')),
-      sanitizeCell(payload.whatsapp_notify_status || 'Pending Manual Dispatch'),
-      Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a')
+      rsvpId, subDate, subTime, guestName, phone, side, attending, count,
+      events, arrDate, arrTime, blessing, consent, notif, sync, lastUp
     ];
 
-    // Find and update existing row (deduplication)
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if ((rsvpId && String(data[i][0]).trim() === rsvpId) || (rawPhone && String(data[i][3]).replace(/\\D/g, '') === rawPhone)) {
+      if ((rsvpId && String(data[i][0]).trim() === rsvpId) || (rawPhone && String(data[i][4]).replace(/\\D/g, '') === rawPhone)) {
         rowIndex = i + 1;
         break;
       }
@@ -413,6 +417,8 @@ function doPost(e) {
 
     if (rowIndex > 0) {
       if (data[rowIndex - 1][0]) rowValues[0] = data[rowIndex - 1][0];
+      if (data[rowIndex - 1][1]) rowValues[1] = data[rowIndex - 1][1];
+      if (data[rowIndex - 1][2]) rowValues[2] = data[rowIndex - 1][2];
       sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
@@ -1138,18 +1144,22 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                         </strong>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        14 Exact Columns
+                        16 Production Columns (A to P)
                       </span>
                     </div>
 
                     <div className="text-xs text-gray-600 space-y-1">
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Folder:</span>
-                        <strong className="text-[#1E2F23]">Tanishq &amp; Shivangee — Wedding RSVP</strong>
+                        <span className="text-gray-500">Spreadsheet:</span>
+                        <strong className="text-[#1E2F23]">T&amp;S Wedding RSVPs</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Spreadsheet:</span>
-                        <strong className="text-[#1E2F23]">Tanishq &amp; Shivangee — Wedding RSVP 2027</strong>
+                        <span className="text-gray-500">Worksheet:</span>
+                        <strong className="text-[#1E2F23]">Sheet1</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Spreadsheet ID:</span>
+                        <span className="font-mono text-[10px] text-[#354F3B]">1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Security:</span>
