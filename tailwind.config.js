@@ -7,57 +7,39 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: {
-          DEFAULT: '#F7F4EE',
-          canvas: '#FBF9F5',
-          alabaster: '#EFECE4',
-          warm: '#FAF8F5',
-          deep: '#E8E1D3',
-          border: '#E2DAC8',
+        botanical: {
+          forest: '#354F3B',
+          forestDark: '#2A3F2F',
+          forestDeep: '#1E2F23',
+          cypress: '#16241B',
+          sage: '#7A917F',
+          sageLight: '#DDE5DE',
+          sageMist: '#EAEee8',
+          alabaster: '#F4F6F3',
+          ivory: '#FDFBF7',
+          stone: '#E8E6DF',
+          stoneDark: '#DCD9D0',
+          cream: '#E8E4D8',
+          brass: '#C5A869',
+          brassDark: '#9E7E38',
+          brassLight: '#E2CA94',
         },
-        sapphire: {
-          DEFAULT: '#0C223B',
-          light: '#143256',
-          deep: '#081729',
-          velvet: '#102845',
-          navy: '#0D2B4E',
-          card: '#0C223B',
-        },
-        champagne: {
-          DEFAULT: '#B8A072',
-          light: '#D5C4A1',
-          dark: '#9A8052',
-          bronze: '#7A643E',
-          subtle: '#C8B58F',
-        },
-        rose: {
-          blush: '#C48B83',
-          light: '#E6C8C3',
-          soft: '#F4E8E5',
-        },
-        // Backward-compatible semantic bridges
-        ivory: {
-          DEFAULT: '#FAF8F5',
-          cream: '#EFECE4',
-          silk: '#F7F4EE',
-          dark: '#E2DAC8',
-        },
-        gold: {
-          foil: '#B8A072',
-          light: '#D5C4A1',
-          champagne: '#B8A072',
-          antique: '#9A8052',
-          dark: '#9A8052',
-          bronze: '#7A643E',
-        },
+        // Graceful aliases for existing components
         royal: {
-          blue: '#0C223B',
-          navy: '#143256',
-          midnight: '#081729',
-          sapphire: '#102845',
-          ivory: '#FAF8F5',
-          cream: '#EFECE4',
-          gold: '#B8A072',
+          ivory: '#F4F6F3',
+          cream: '#EAEee8',
+          parchment: '#E8E6DF',
+          gold: '#C5A869',
+          goldLight: '#E8E4D8',
+          goldDark: '#9E7E38',
+          bronze: '#7A917F',
+          maroon: '#1E2F23',
+          maroonDark: '#16241B',
+          crimson: '#2A3F2F',
+          emerald: '#354F3B',
+          indigo: '#1E2F23',
+          haldi: '#C5A869',
+          vermilion: '#B08D44',
         }
       },
       fontFamily: {
@@ -81,9 +63,10 @@ export default {
         }
       },
       boxShadow: {
-        'envelope': '0 28px 60px -15px rgba(12,34,59,0.22), 0 4px 16px -2px rgba(12,34,59,0.08)',
-        'wax-seal': '0 16px 32px -8px rgba(12,34,59,0.32), inset 0 2px 4px rgba(255,250,235,0.65)',
-        'quiet-card': '0 20px 48px -12px rgba(12,34,59,0.1), 0 2px 8px rgba(12,34,59,0.04)',
+        'envelope': '0 25px 50px -12px rgba(22, 36, 27, 0.25), 0 0 0 1px rgba(197, 168, 105, 0.2)',
+        'wax-seal': '0 6px 16px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.3)',
+        'botanical': '0 20px 40px -15px rgba(30, 47, 35, 0.08), 0 0 0 1px rgba(197, 168, 105, 0.2)',
+        'brass-glow': '0 0 30px rgba(197, 168, 105, 0.25)',
       }
     },
   },
