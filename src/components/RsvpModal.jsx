@@ -316,9 +316,34 @@ function WeddingTimePicker({ value, onChange }) {
 }
 
 export default function RsvpModal({ isOpen, onClose }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const s = parseInt(new URLSearchParams(window.location.search).get('step') || '1', 10);
+      return (s >= 1 && s <= 4) ? s : 1;
+    }
+    return 1;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedData, setSubmittedData] = useState(null);
+  const [submittedData, setSubmittedData] = useState(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('step') === '4') {
+      return {
+        guest_name: 'Dr. Rajesh Sharma & Family',
+        phone: '9876543210',
+        side: 'Baluapuri Family',
+        attending: 'Joyfully Attending',
+        guest_count: 2,
+        events_attending: [
+          'Ganesh Poojan & Mamera (14th Feb, 9 AM)',
+          'Rangrez Haldi Carnival (14th Feb, 12 PM)',
+          'Sham-e-Sangeet & Ring Ceremony (14th Feb, 6 PM)',
+          'Barat, Varmala & Sajan Goth Lunch (15th Feb, 9 AM)'
+        ],
+        arrival_date: '14 February 2027',
+        blessing_message: 'May your sacred bond be blessed with boundless love and eternal joy!'
+      };
+    }
+    return null;
+  });
   const [submissionError, setSubmissionError] = useState('');
 
   const [formData, setFormData] = useState({
@@ -345,16 +370,25 @@ export default function RsvpModal({ isOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
 
-  // Lock background page scroll while RSVP modal is open
+  // Lock background page scroll while RSVP modal is open & add escape key listener
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+
       return () => {
         document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -393,6 +427,14 @@ export default function RsvpModal({ isOpen, onClose }) {
     setStep(prev => Math.max(1, prev - 1));
   };
 
+  const handleDone = () => {
+    onClose();
+    setTimeout(() => {
+      setStep(1);
+      setSubmittedData(null);
+    }, 300);
+  };
+
   const toggleEvent = (eventLabel) => {
     setFormData(prev => {
       const exists = prev.events_attending.includes(eventLabel);
@@ -411,15 +453,19 @@ export default function RsvpModal({ isOpen, onClose }) {
     setIsSubmitting(true);
     setSubmissionError('');
 
-    const formattedArrival = formData.arrival_date && formData.arrival_time
-      ? `${formData.arrival_date} at ${formData.arrival_time}`
-      : formData.arrival_date || formData.arrival_time || '14 February 2027';
+    const formattedArrival = formData.attending === 'Regretfully Declining'
+      ? 'Not Attending'
+      : (formData.arrival_date && formData.arrival_time
+          ? `${formData.arrival_date} at ${formData.arrival_time}`
+          : formData.arrival_date || formData.arrival_time || '14 February 2027');
 
     const submissionPayload = {
       ...formData,
+      guest_count: formData.attending === 'Regretfully Declining' ? 0 : formData.guest_count,
+      events_attending: formData.attending === 'Regretfully Declining' ? [] : formData.events_attending,
       arrival_date: formattedArrival,
-      arrival_info: `${formData.arrival_mode} - ${formattedArrival}`,
-      needs_accommodation: 'No', // Removed from UI, cleanly defaulted for database compatibility
+      arrival_info: formData.attending === 'Regretfully Declining' ? 'Regretfully Declining' : `${formData.arrival_mode} - ${formattedArrival}`,
+      needs_accommodation: 'No',
       dietary_notes: '',
       event_notes: '',
       blessing_message: (formData.blessing_message || '').trim()
@@ -452,58 +498,69 @@ export default function RsvpModal({ isOpen, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-[#1E2D25]/80 backdrop-blur-md overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-[#1E2D25]/80 backdrop-blur-md overflow-hidden"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        className="relative w-full max-w-xl max-h-[92dvh] sm:max-h-[780px] flex flex-col bg-[#FDFBF7] rounded-3xl border border-[#C3A56B]/40 shadow-2xl overflow-hidden bg-paper-texture"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        className="relative w-full max-w-xl max-h-[92dvh] sm:max-h-[82vh] flex flex-col bg-[#FDFBF7] rounded-3xl border border-[#C3A56B]/40 shadow-2xl overflow-hidden bg-paper-texture"
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/80 border border-[#C3A56B]/30 flex items-center justify-center text-[#343F35] hover:bg-[#41584C] hover:text-[#F5F0E5] transition-all"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* ---------------- REGION 1: HEADER (shrink-0, pinned at top) ---------------- */}
+        <header className="relative shrink-0 pt-5 sm:pt-6 pb-3 sm:pb-3.5 px-6 sm:px-12 text-center border-b border-[#C3A56B]/25 bg-[#FAF8F2]/95 backdrop-blur-sm z-20">
+          {/* Elegant Ivory Circular Close Button with subtle gold outline & dark-sage icon */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close RSVP form"
+            className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F2] border border-[#C3A56B]/60 flex items-center justify-center text-[#343F35] hover:bg-[#41584C] hover:text-[#FAF8F2] hover:border-[#41584C] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#C3A56B] active:scale-95 cursor-pointer"
+          >
+            <X className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
+          </button>
 
-        {/* Modal Header (Pinned at top) */}
-        <div className="shrink-0 pt-6 sm:pt-7 pb-3.5 px-6 sm:px-8 text-center border-b border-[#C3A56B]/20 bg-[#FDFBF7]/95 backdrop-blur-sm z-10">
+          {/* Wedding Monogram */}
           <img
             src="/monogram_gold_transparent.png"
             alt="T&amp;S"
-            className="w-10 h-14 object-contain mx-auto mb-2 drop-shadow-sm"
+            className="w-9 h-12 sm:w-10 sm:h-13 object-contain mx-auto mb-1.5 drop-shadow-xs"
           />
 
-          <span className="font-cormorant uppercase text-[11px] tracking-[0.3em] text-[#657968] font-semibold block">
+          <span className="font-cormorant uppercase text-[10px] sm:text-[11px] tracking-[0.28em] text-[#657968] font-semibold block">
             Tanishq &amp; Shivangee • 14–15 Feb 2027
           </span>
-          <h3 className="font-cormorant text-2xl sm:text-3xl uppercase tracking-[0.2em] font-light text-[#343F35] mt-0.5">
+
+          <h3 className="font-cormorant text-2xl sm:text-3xl uppercase tracking-[0.18em] font-light text-[#343F35] mt-0.5">
             {step === 4 ? 'Digital Boarding Pass' : 'Wedding Response Card'}
           </h3>
+
           <p className="font-cormorant italic text-xs sm:text-sm text-[#657968] mt-0.5">
             {step === 4 
               ? 'Your presence is our cherished blessing. See you in Chhindwara!' 
               : `Step ${step} of 3: ${
-                  step === 1 ? 'Guest Information' : step === 2 ? 'Attendance & Headcount' : 'Travel Schedule'
+                  step === 1 ? 'Guest Information' : step === 2 ? 'Attendance & Headcount' : 'Final Details'
                 }`}
           </p>
 
           {step < 4 && (
-            <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-4">
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 1 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 2 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 3 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
+            <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-3">
+              <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${step >= 1 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${step >= 3 ? 'bg-[#41584C]' : 'bg-[#C3A56B]/25'}`} />
             </div>
           )}
-        </div>
+        </header>
 
-        {/* Form Body (Single-container smooth scrolling with generous bottom padding) */}
-        <div className="overflow-y-auto flex-1 px-6 sm:px-9 py-5 overscroll-contain modal-scrollbar pb-8 sm:pb-10">
+        {/* ---------------- REGION 2: BODY (flex-1 min-h-0, independently scrollable) ---------------- */}
+        <div className="overflow-y-auto flex-1 min-h-0 px-6 sm:px-9 py-5 overscroll-contain modal-scrollbar space-y-5">
           
           {/* STEP 1: GUEST DETAILS */}
           {step === 1 && (
-            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
               <div>
                 <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1">
                   Full Name / Family Representative <span className="text-red-700">*</span>
@@ -515,7 +572,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     value={formData.guest_name}
                     onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
                     placeholder="e.g. Dr. Rajesh Sharma &amp; Family"
-                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#41584C]/30 text-[#343F35] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#41584C]"
+                    className="w-full pl-8 pr-3 py-2 bg-transparent border-b border-[#41584C]/30 text-[#343F35] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#41584C]"
                   />
                 </div>
                 {errors.guest_name && (
@@ -534,7 +591,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="10-digit mobile number"
-                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#41584C]/30 text-[#343F35] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#41584C]"
+                    className="w-full pl-8 pr-3 py-2 bg-transparent border-b border-[#41584C]/30 text-[#343F35] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#41584C]"
                   />
                 </div>
                 {errors.phone && (
@@ -567,22 +624,12 @@ export default function RsvpModal({ isOpen, onClose }) {
                   ))}
                 </div>
               </div>
-
-              <div className="pt-5 pb-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="w-full sm:w-auto px-8 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm"
-                >
-                  Continue →
-                </button>
-              </div>
             </motion.div>
           )}
 
           {/* STEP 2: ATTENDANCE & HEADCOUNT */}
           {step === 2 && (
-            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
               <div>
                 <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-2">
                   Will you grace the celebrations?
@@ -621,7 +668,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     We will dearly miss your gracious presence at the celebrations.
                   </p>
                   <p className="text-[11px] font-sans text-[#657968] mt-1">
-                    Please confirm your response below so we can record your blessings in our guest ledger.
+                    Please continue to the final step to send your blessings to Tanishq &amp; Shivangee.
                   </p>
                 </div>
               )}
@@ -693,46 +740,19 @@ export default function RsvpModal({ isOpen, onClose }) {
                         );
                       })}
                     </div>
+                    {errors.events_attending && (
+                      <p className="text-xs text-red-600 mt-1.5 font-sans">{errors.events_attending}</p>
+                    )}
                   </div>
                 </>
               )}
-
-              <div className="pt-5 pb-2 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={handlePrev}
-                  className="px-6 py-2.5 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40 transition-colors"
-                >
-                  ← Back
-                </button>
-
-                {formData.attending === 'Regretfully Declining' ? (
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="px-8 py-3 rounded-full bg-gray-800 text-white font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black transition-all flex items-center gap-2 shadow-sm"
-                  >
-                    {isSubmitting && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
-                    <span>Confirm Response</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="px-8 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm"
-                  >
-                    Continue to Travel Schedule →
-                  </button>
-                )}
-              </div>
             </motion.div>
           )}
 
-          {/* STEP 3: TRAVEL SCHEDULE (Streamlined, elegant, no unwanted textboxes) */}
+          {/* STEP 3: FINAL DETAILS & BLESSING */}
           {step === 3 && (
-            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-              {formData.attending === 'Joyfully Attending' && (
+            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+              {formData.attending === 'Joyfully Attending' ? (
                 <>
                   {/* Mode of Travel Pills */}
                   <div>
@@ -763,7 +783,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
 
                   {/* Date & Time Selectors Side by Side */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1">
                         Expected Arrival Date
@@ -786,7 +806,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
 
                   {/* A Blessing for the Couple (Dedicated luxury wedding stationery message box) */}
-                  <div className="rounded-2xl bg-[#FDFBF7] border border-[#C3A56B]/35 p-4 sm:p-5 shadow-sm bg-paper-texture">
+                  <div className="rounded-2xl bg-[#FDFBF7] border border-[#C3A56B]/35 p-3.5 sm:p-4 shadow-sm bg-paper-texture">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-[#C3A56B]" />
@@ -799,7 +819,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                       </span>
                     </div>
 
-                    <p className="text-xs text-[#657968] font-sans mb-3">
+                    <p className="text-xs text-[#657968] font-sans mb-2">
                       Leave a heartfelt wish or blessing for Tanishq &amp; Shivangee.
                     </p>
 
@@ -810,7 +830,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                         value={formData.blessing_message}
                         onChange={(e) => setFormData({ ...formData, blessing_message: e.target.value })}
                         placeholder="Write your blessings and wishes here..."
-                        className="w-full p-3 sm:p-3.5 rounded-xl bg-white/80 border border-[#C3A56B]/30 text-xs font-sans text-[#343F35] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#41584C] focus:border-[#41584C] resize-none transition-all leading-relaxed"
+                        className="w-full p-2.5 sm:p-3 rounded-xl bg-white/80 border border-[#C3A56B]/30 text-xs font-sans text-[#343F35] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#41584C] focus:border-[#41584C] resize-none transition-all leading-relaxed"
                       />
                       <div className="flex items-center justify-between mt-1 text-[10px] text-[#657968]">
                         <span className="font-cormorant italic">Your words will be cherished forever</span>
@@ -820,68 +840,77 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
 
                   {/* Hospitable reassurance note */}
-                  <div className="p-3.5 rounded-2xl bg-[#EAE2D3]/40 border border-[#C3A56B]/30 text-center">
+                  <div className="p-3 rounded-2xl bg-[#EAE2D3]/40 border border-[#C3A56B]/30 text-center">
                     <p className="font-cormorant italic text-xs sm:text-sm text-[#343F35]">
                       Our family reception team will be ready to welcome you at The Waterstone Resort, Chhindwara.
                     </p>
                   </div>
                 </>
-              )}
-
-              <div className="pt-5 pb-2 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={handlePrev}
-                  className="px-6 py-2.5 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40 transition-colors"
-                >
-                  ← Back
-                </button>
-
-                {submissionError && (
-                  <div
-                    role="alert"
-                    aria-live="assertive"
-                    className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-left text-xs text-red-800"
-                  >
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>{submissionError}</span>
+              ) : (
+                /* Declining Guest Final Step: Blessing Message */
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-[#EAE2D3]/40 border border-[#C3A56B]/30 text-center">
+                    <p className="font-cormorant italic text-sm text-[#343F35]">
+                      Even from afar, your blessings mean the world to Tanishq &amp; Shivangee.
+                    </p>
+                    <p className="text-[11px] font-sans text-[#657968] mt-1">
+                      Please leave a blessing for the couple below before submitting your response.
+                    </p>
                   </div>
-                )}
 
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  aria-busy={isSubmitting}
-                  className="px-9 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C3A56B]/40 hover:bg-[#2C3E34] disabled:cursor-wait disabled:opacity-70 transition-all flex items-center gap-2 shadow-sm"
-                >
-                  {isSubmitting && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
-                  {isSubmitting ? 'Saving RSVP...' : 'Confirm RSVP'}
-                </button>
-              </div>
+                  <div className="rounded-2xl bg-[#FDFBF7] border border-[#C3A56B]/35 p-3.5 sm:p-4 shadow-sm bg-paper-texture">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[#C3A56B]" />
+                        <h4 className="font-cormorant text-base sm:text-lg font-semibold text-[#343F35]">
+                          A Blessing for the Couple
+                        </h4>
+                      </div>
+                      <span className="text-[10px] uppercase font-sans tracking-widest text-[#657968] font-medium">
+                        Optional
+                      </span>
+                    </div>
+
+                    <div className="relative mt-2">
+                      <textarea
+                        rows={3}
+                        maxLength={500}
+                        value={formData.blessing_message}
+                        onChange={(e) => setFormData({ ...formData, blessing_message: e.target.value })}
+                        placeholder="Write your warm wishes and blessings for the couple..."
+                        className="w-full p-2.5 sm:p-3 rounded-xl bg-white/80 border border-[#C3A56B]/30 text-xs font-sans text-[#343F35] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#41584C] focus:border-[#41584C] resize-none transition-all leading-relaxed"
+                      />
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-[#657968]">
+                        <span className="font-cormorant italic">Your words will be cherished forever</span>
+                        <span className="font-mono">{(formData.blessing_message || '').length}/500</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* STEP 4: DIGITAL BOARDING PASS WITH CUSTOM MONOGRAM CREST */}
           {step === 4 && submittedData && (
-            <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+            <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
               <div role="status" aria-live="polite" className="flex items-center gap-2 rounded-2xl border border-[#41584C]/20 bg-[#EAE2D3]/60 px-3 py-2.5 text-xs text-[#343F35]">
                 <CheckCircle2 className="h-4 w-4 text-[#41584C]" />
                 <span>Your RSVP is confirmed and ready to share with the hosts.</span>
               </div>
-              <div className="relative bg-white rounded-3xl p-6 sm:p-8 border border-[#C3A56B]/40 shadow-botanical overflow-hidden">
-                <div className="flex items-center justify-between pb-4 border-b border-[#C3A56B]/20">
+              <div className="relative bg-white rounded-3xl p-5 sm:p-7 border border-[#C3A56B]/40 shadow-botanical overflow-hidden">
+                <div className="flex items-center justify-between pb-3.5 border-b border-[#C3A56B]/20">
                   <div className="flex items-center gap-3">
                     <img
                       src="/monogram_gold_transparent.png"
                       alt="T&amp;S Crest"
-                      className="w-10 h-14 object-contain filter drop-shadow-sm"
+                      className="w-9 h-13 object-contain filter drop-shadow-sm"
                     />
                     <div>
                       <span className="font-cormorant uppercase text-[10px] tracking-[0.25em] text-[#657968] font-semibold block">
                         Wedding Admittance Pass
                       </span>
-                      <h4 className="font-pinyon text-3xl text-[#343F35]">
+                      <h4 className="font-pinyon text-2xl sm:text-3xl text-[#343F35]">
                         Tanishq &amp; Shivangee
                       </h4>
                     </div>
@@ -891,7 +920,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-4 border-b border-dashed border-[#C3A56B]/30 text-xs font-sans">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3.5 border-b border-dashed border-[#C3A56B]/30 text-xs font-sans">
                   <div>
                     <span className="text-[10px] text-[#657968] uppercase block">Guest</span>
                     <strong className="text-[#343F35] font-cormorant text-sm block truncate">
@@ -919,15 +948,15 @@ export default function RsvpModal({ isOpen, onClose }) {
                 </div>
 
                 {submittedData.attending === 'Joyfully Attending' && (
-                  <div className="py-4 border-b border-[#C3A56B]/20 text-xs font-sans">
-                    <span className="text-[10px] text-[#657968] uppercase block font-semibold mb-2">
+                  <div className="py-3 border-b border-[#C3A56B]/20 text-xs font-sans">
+                    <span className="text-[10px] text-[#657968] uppercase block font-semibold mb-1.5">
                       Events Checklist:
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[#343F35]">
                       {(submittedData.events_attending || []).map((ev, i) => (
                         <div key={i} className="flex items-center gap-1.5">
                           <Check className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                          <span className="truncate">{ev}</span>
+                          <span className="truncate text-[11px]">{ev}</span>
                         </div>
                       ))}
                     </div>
@@ -935,7 +964,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                 )}
 
                 {submittedData.blessing_message && (
-                  <div className="py-3.5 border-b border-[#C3A56B]/20 text-xs font-sans bg-[#FDFBF7] -mx-6 sm:-mx-8 px-6 sm:px-8">
+                  <div className="py-3 border-b border-[#C3A56B]/20 text-xs font-sans bg-[#FDFBF7] -mx-5 sm:-mx-7 px-5 sm:px-7">
                     <span className="text-[10px] text-[#657968] uppercase block font-semibold mb-1">
                       Your Heartfelt Blessing:
                     </span>
@@ -945,43 +974,124 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
                 )}
 
-                <div className="pt-4 flex items-center justify-between text-xs font-sans">
+                <div className="pt-3.5 flex items-center justify-between text-xs font-sans">
                   <div>
                     <span className="text-[10px] text-[#657968] block">Host Contact:</span>
                     <span className="font-semibold text-[#343F35]">9425006278 • 8623876930</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <QrCode className="w-7 h-7 text-[#343F35]/70" />
+                    <QrCode className="w-6 h-6 text-[#343F35]/70" />
                     <span className="text-[9px] font-mono uppercase text-[#657968]">
                       14–15 FEB 2027
                     </span>
                   </div>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a
-                  href={getWhatsAppShareUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Confirm RSVP on WhatsApp"
-                  className="flex-1 py-3 rounded-full bg-[#25D366] text-white font-sans font-semibold text-xs tracking-wider uppercase shadow-sm hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Confirm on WhatsApp</span>
-                </a>
-
-                <button
-                  onClick={onClose}
-                  className="px-6 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all"
-                >
-                  Done
-                </button>
-              </div>
             </motion.div>
           )}
 
         </div>
+
+        {/* ---------------- REGION 3: FOOTER (shrink-0, always visible at bottom) ---------------- */}
+        <footer className="shrink-0 border-t border-[#C3A56B]/25 bg-[#FAF8F2]/95 backdrop-blur-sm px-6 sm:px-9 py-3 sm:py-3.5 z-20 flex flex-col gap-2">
+          {submissionError && step === 3 && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-800"
+            >
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{submissionError}</span>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="flex items-center justify-end w-full">
+              <button
+                type="button"
+                onClick={handleNext}
+                className="w-full sm:w-auto px-8 py-2.5 sm:py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Continue</span>
+                <span className="text-sm font-sans">→</span>
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="flex items-center justify-between w-full gap-3">
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="px-6 py-2.5 rounded-full border border-[#C3A56B]/40 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/60 transition-colors cursor-pointer"
+              >
+                ← Back
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-8 py-2.5 sm:py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Continue</span>
+                <span className="text-sm font-sans">→</span>
+              </button>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex items-center justify-between w-full gap-3">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={isSubmitting}
+                className="px-6 py-2.5 rounded-full border border-[#C3A56B]/40 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/60 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                ← Back
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+                className="px-8 py-2.5 sm:py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C3A56B]/40 hover:bg-[#2C3E34] disabled:cursor-wait disabled:opacity-70 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving RSVP...</span>
+                  </>
+                ) : (
+                  <span>Submit RSVP</span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+              <a
+                href={getWhatsAppShareUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Confirm RSVP on WhatsApp"
+                className="w-full sm:flex-1 py-2.5 sm:py-3 rounded-full bg-[#25D366] text-white font-sans font-semibold text-xs tracking-wider uppercase shadow-sm hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Confirm on WhatsApp</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={handleDone}
+                className="w-full sm:w-auto px-8 py-2.5 sm:py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          )}
+        </footer>
       </motion.div>
     </div>
   );
