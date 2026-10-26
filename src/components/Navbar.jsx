@@ -33,11 +33,11 @@ export default function Navbar({ onOpenRsvp }) {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2.5 group text-left"
           >
-            <div className="w-8 h-8 rounded-full bg-[#41584C] border border-[#C3A56B]/50 flex items-center justify-center p-1 shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-[#FAF8F2] border border-[#C3A56B]/60 flex items-center justify-center p-1 shadow-sm group-hover:border-[#C3A56B] transition-colors">
               <img
                 src="/monogram_gold_transparent.png"
                 alt="T&amp;S"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]"
               />
             </div>
             <div>
@@ -51,7 +51,13 @@ export default function Navbar({ onOpenRsvp }) {
           </button>
 
           {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-7 text-xs font-cormorant uppercase tracking-[0.2em] font-medium text-[#343F35]">
+          <div className="hidden md:flex items-center gap-6 text-xs font-cormorant uppercase tracking-[0.2em] font-medium text-[#343F35]">
+            <button 
+              onClick={() => scrollTo('divine-union')}
+              className="hover:text-[#41584C] transition-colors"
+            >
+              Divine Union
+            </button>
             <button 
               onClick={() => scrollTo('itinerary')}
               className="hover:text-[#41584C] transition-colors"

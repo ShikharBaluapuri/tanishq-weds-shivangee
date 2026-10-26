@@ -4,8 +4,8 @@ import { BotanicalCornerSprig, HandDrawnArrow } from './BespokeIcons';
 import { royalAudioEngine } from './AudioPlayer';
 import { triggerFloralShower } from './FloralPetalsEngine';
 
-export default function WaxSealPreloader({ onOpenInvitation }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function WaxSealPreloader({ onOpenInvitation, initialOpen = false }) {
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const [isOpening, setIsOpening] = useState(false);
   const [cardRising, setCardRising] = useState(false);
 
@@ -93,7 +93,7 @@ export default function WaxSealPreloader({ onOpenInvitation }) {
           </div>
 
           {/* 2. CENTER HERO ENVELOPE WITH CUSTOM MONOGRAM WAX SEAL */}
-          <div className="relative z-10 my-auto w-full max-w-[min(90vw,clamp(260px,40vh*1.48,400px))] aspect-[1.48/1] flex items-center justify-center flex-shrink">
+          <div className="relative z-10 my-auto w-[92vw] max-w-[490px] aspect-[1.54/1] flex items-center justify-center flex-shrink">
             
             {/* Delicate Botanical Sprigs Draping over the envelope corners */}
             <div className="absolute -top-6 -right-6 sm:-top-8 sm:-right-8 z-30 pointer-events-none transform rotate-12 scale-90 sm:scale-105 drop-shadow-md">
@@ -185,32 +185,32 @@ export default function WaxSealPreloader({ onOpenInvitation }) {
                 </svg>
               </motion.div>
 
-              {/* BESPOKE ANTIQUE GOLD WAX SEAL (Centered at flap's apex) */}
+              {/* BESPOKE ANTIQUE GOLD WAX SEAL (Delicate luxury stationery proportions) */}
               <div className="absolute top-[56%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
                 <motion.button
                   onClick={handleSealClick}
-                  whileHover={{ scale: 1.08 }}
+                  whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.94 }}
                   className="relative group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C3A56B]/50 rounded-full"
                   aria-label="Click to Open Wedding Invitation Envelope"
                 >
                   {/* The Bespoke Antique Gold Wax Seal with Custom Monogram */}
                   <motion.div
-                    animate={isOpening ? { scale: [1, 1.14, 0.95], rotate: [0, -3, 3, 0] } : {}}
+                    animate={isOpening ? { scale: [1, 1.12, 0.96], rotate: [0, -3, 3, 0] } : {}}
                     transition={{ duration: 0.5 }}
-                    className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-full flex items-center justify-center drop-shadow-2xl"
+                    className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-[4.6rem] md:h-[4.6rem] rounded-full flex items-center justify-center drop-shadow-[0_4px_12px_rgba(30,45,37,0.32)]"
                   >
                     <img
                       src="/wax_seal_custom.png"
                       alt="Tanishq &amp; Shivangee Custom Antique Gold Wax Seal"
-                      className="w-full h-full object-contain filter drop-shadow-lg transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-105"
                     />
 
-                    {/* Subtle pulsing aura ring on hover */}
+                    {/* Subtle delicate pulsing aura ring */}
                     <motion.div
-                      animate={{ scale: [1, 1.25, 1], opacity: [0.55, 0.05, 0.55] }}
+                      animate={{ scale: [1, 1.18, 1], opacity: [0.4, 0.05, 0.4] }}
                       transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute inset-0 -m-2 rounded-full border border-[#C3A56B]/60 pointer-events-none"
+                      className="absolute inset-0 -m-1 rounded-full border border-[#C3A56B]/50 pointer-events-none"
                     />
                   </motion.div>
                 </motion.button>

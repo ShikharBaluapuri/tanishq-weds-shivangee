@@ -1,5 +1,5 @@
 import { createWhatsAppLink, formatRsvpConfirmation } from '../lib/whatsapp';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -345,6 +345,17 @@ export default function RsvpModal({ isOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
 
+  // Lock background page scroll while RSVP modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const ALL_EVENTS = [
@@ -441,12 +452,12 @@ export default function RsvpModal({ isOpen, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E2D25]/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-[#1E2D25]/80 backdrop-blur-md overflow-hidden">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="relative w-full max-w-xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] bg-[#FDFBF7] rounded-3xl border border-[#C3A56B]/40 shadow-2xl overflow-y-auto my-2 sm:my-6 bg-paper-texture"
+        className="relative w-full max-w-xl max-h-[92dvh] sm:max-h-[780px] flex flex-col bg-[#FDFBF7] rounded-3xl border border-[#C3A56B]/40 shadow-2xl overflow-hidden bg-paper-texture"
       >
         {/* Close Button */}
         <button
@@ -456,8 +467,8 @@ export default function RsvpModal({ isOpen, onClose }) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Modal Header */}
-        <div className="pt-7 pb-4 px-8 text-center border-b border-[#C3A56B]/20 bg-white/60">
+        {/* Modal Header (Pinned at top) */}
+        <div className="shrink-0 pt-6 sm:pt-7 pb-3.5 px-6 sm:px-8 text-center border-b border-[#C3A56B]/20 bg-[#FDFBF7]/95 backdrop-blur-sm z-10">
           <img
             src="/monogram_gold_transparent.png"
             alt="T&amp;S"
@@ -487,8 +498,8 @@ export default function RsvpModal({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* Form Body */}
-        <div className="p-7 sm:p-9">
+        {/* Form Body (Single-container smooth scrolling with generous bottom padding) */}
+        <div className="overflow-y-auto flex-1 px-6 sm:px-9 py-5 overscroll-contain modal-scrollbar pb-8 sm:pb-10">
           
           {/* STEP 1: GUEST DETAILS */}
           {step === 1 && (
@@ -557,11 +568,11 @@ export default function RsvpModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
+              <div className="pt-5 pb-2 flex justify-end">
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-7 py-2.5 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all"
+                  className="w-full sm:w-auto px-8 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm"
                 >
                   Continue →
                 </button>
@@ -686,11 +697,11 @@ export default function RsvpModal({ isOpen, onClose }) {
                 </>
               )}
 
-              <div className="pt-4 flex items-center justify-between">
+              <div className="pt-5 pb-2 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="px-5 py-2 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40"
+                  className="px-6 py-2.5 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40 transition-colors"
                 >
                   ← Back
                 </button>
@@ -700,7 +711,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="px-7 py-2.5 rounded-full bg-gray-800 text-white font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black transition-all flex items-center gap-2"
+                    className="px-8 py-3 rounded-full bg-gray-800 text-white font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black transition-all flex items-center gap-2 shadow-sm"
                   >
                     {isSubmitting && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
                     <span>Confirm Response</span>
@@ -709,7 +720,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="px-7 py-2.5 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all"
+                    className="px-8 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all shadow-sm"
                   >
                     Continue to Travel Schedule →
                   </button>
@@ -817,11 +828,11 @@ export default function RsvpModal({ isOpen, onClose }) {
                 </>
               )}
 
-              <div className="pt-4 flex items-center justify-between">
+              <div className="pt-5 pb-2 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="px-5 py-2 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40"
+                  className="px-6 py-2.5 rounded-full border border-[#C3A56B]/30 text-[#343F35] font-cormorant uppercase tracking-[0.15em] text-xs hover:bg-[#EAE2D3]/40 transition-colors"
                 >
                   ← Back
                 </button>
@@ -842,7 +853,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                   aria-busy={isSubmitting}
-                  className="px-8 py-2.5 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C3A56B]/40 hover:bg-[#2C3E34] disabled:cursor-wait disabled:opacity-70 transition-all flex items-center gap-2"
+                  className="px-9 py-3 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C3A56B]/40 hover:bg-[#2C3E34] disabled:cursor-wait disabled:opacity-70 transition-all flex items-center gap-2 shadow-sm"
                 >
                   {isSubmitting && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
                   {isSubmitting ? 'Saving RSVP...' : 'Confirm RSVP'}

@@ -33,20 +33,44 @@
     color: var(--dark-olive);
   }
 
-  /* Custom Antique Gold Scrollbar */
+  /* Understated Luxury Minimal Scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
+    height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #EAE2D3;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #C3A56B;
-    border-radius: 3px;
+    background: rgba(65, 88, 76, 0.22);
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #A78343;
+    background: rgba(65, 88, 76, 0.45);
   }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(65, 88, 76, 0.22) transparent;
+  }
+}
+
+/* Subtle luxury modal scrollbar */
+.modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(65, 88, 76, 0.2) transparent;
+}
+.modal-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(65, 88, 76, 0.2);
+  border-radius: 9999px;
+}
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(65, 88, 76, 0.4);
 }
 
 /* Authentic Handmade Cotton Paper Texture */

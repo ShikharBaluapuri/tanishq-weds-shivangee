@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import WaxSealPreloader from './components/WaxSealPreloader';
 import HeroSection from './components/HeroSection';
+import ShivShaktiSection from './components/ShivShaktiSection';
 import ItinerarySection from './components/ItinerarySection';
 import VenueSection from './components/VenueSection';
 import WallOfBlessings from './components/WallOfBlessings';
@@ -12,9 +13,19 @@ import AudioPlayer from './components/AudioPlayer';
 import MobileNavigation from './components/MobileNavigation';
 
 export default function App() {
-  const [isRsvpOpen, setIsRsvpOpen] = useState(false);
+  const [isRsvpOpen, setIsRsvpOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).has('rsvp');
+    }
+    return false;
+  });
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [hasOpenedInvitation, setHasOpenedInvitation] = useState(false);
+  const [hasOpenedInvitation, setHasOpenedInvitation] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).has('opened');
+    }
+    return false;
+  });
 
   // Lock body scroll while opening envelope is visible, unlock cleanly when opened
   useEffect(() => {
@@ -31,6 +42,19 @@ export default function App() {
     };
   }, [hasOpenedInvitation]);
 
+  // Handle instant anchor scrolling on page load
+  useEffect(() => {
+    if (hasOpenedInvitation && typeof window !== 'undefined' && window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }, 50);
+      }
+    }
+  }, [hasOpenedInvitation]);
+
   const handleOpenInvitation = () => {
     setHasOpenedInvitation(true);
   };
@@ -45,7 +69,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F0E5] text-[#343F35] relative font-sans">
       {/* 1. Wax Seal Envelope Preloader (Full screen initial experience) */}
-      <WaxSealPreloader onOpenInvitation={handleOpenInvitation} />
+      <WaxSealPreloader onOpenInvitation={handleOpenInvitation} initialOpen={hasOpenedInvitation} />
 
       {/* 2. Ambient Indian Classical Shehnai / Flute Music Player */}
       <AudioPlayer autoStart={hasOpenedInvitation} />
@@ -60,6 +84,9 @@ export default function App() {
           onOpenRsvp={() => setIsRsvpOpen(true)} 
           onScrollToItinerary={handleScrollToItinerary}
         />
+
+        {/* Sacred Shiv–Shakti Divine Union Section */}
+        <ShivShaktiSection />
 
         {/* Dynamic Theme-Shifting Itinerary */}
         <ItinerarySection />
