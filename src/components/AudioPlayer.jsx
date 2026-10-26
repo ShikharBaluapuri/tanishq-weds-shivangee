@@ -141,12 +141,12 @@ export default function AudioPlayer({ autoStart = false }) {
     <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
       {/* Visualizer pill when playing */}
       {isPlaying && (
-        <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full glass-alabaster shadow-botanical border border-[#C5A869]/40 backdrop-blur-md">
-          <span className="w-1 h-3 bg-[#C5A869] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-1 h-4 bg-[#354F3B] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-1 h-2.5 bg-[#C5A869] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          <span className="w-1 h-4.5 bg-[#354F3B] rounded-full animate-bounce" style={{ animationDelay: '450ms' }} />
-          <span className="text-xs font-cormorant italic text-[#1E2F23] font-medium ml-1">
+        <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full shadow-[0_8px_24px_-4px_rgba(12,34,59,0.15)] border border-[#B8A072]/30 backdrop-blur-md bg-[#FAF8F5]/95 text-[#0C223B]">
+          <span className="w-1 h-3 bg-[#B8A072] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-1 h-4 bg-[#0C223B] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-1 h-2.5 bg-[#B8A072] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <span className="w-1 h-4.5 bg-[#C48B83] rounded-full animate-bounce" style={{ animationDelay: '450ms' }} />
+          <span className="text-xs font-cormorant italic text-[#0C223B] font-medium ml-1">
             Din Shagna Da • Wedding Theme
           </span>
         </div>
@@ -159,27 +159,27 @@ export default function AudioPlayer({ autoStart = false }) {
         title={isPlaying ? 'Mute Din Shagna Da' : 'Play Din Shagna Da'}
         className={`relative group w-12 h-12 p-2.5 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl border ${
           isPlaying 
-            ? 'bg-gradient-to-tr from-[#1E2F23] via-[#354F3B] to-[#25392A] text-[#E8E4D8] border-[#C5A869] shadow-brass-glow scale-105' 
-            : 'bg-white/95 text-[#1E2F23] border-[#C5A869]/40 hover:border-[#C5A869] hover:scale-105'
+            ? 'bg-[#0C223B] text-[#FAF8F5] border-2 border-[#B8A072] shadow-[0_12px_28px_-6px_rgba(12,34,59,0.35)] scale-105' 
+            : 'bg-[#FAF8F5] text-[#0C223B] border border-[#B8A072]/40 hover:border-[#B8A072] hover:scale-105 shadow-md'
         }`}
       >
         {/* Vinyl Grooves & Spinning animation */}
-        <div className={`absolute inset-0 rounded-full border border-dashed border-[#C5A869]/30 pointer-events-none ${isPlaying ? 'animate-spin-slow' : ''}`} />
+        <div className={`absolute inset-0 rounded-full border border-dashed border-[#B8A072]/40 pointer-events-none ${isPlaying ? 'animate-spin-slow' : ''}`} />
         
         {isPlaying ? (
           <div className="relative flex items-center justify-center">
-            <Volume2 className="w-4 h-4 text-[#C5A869]" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#C5A869] rounded-full animate-ping" />
+            <Volume2 className="w-4 h-4 text-[#B8A072]" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#B8A072] rounded-full animate-ping" />
           </div>
         ) : (
           <div className="relative flex items-center justify-center">
-            <VolumeX className="w-4 h-4 opacity-70 text-[#7A917F]" />
-            <Music className="w-2.5 h-2.5 text-[#C5A869] absolute -top-1 -right-1 opacity-70" />
+            <VolumeX className="w-4 h-4 opacity-80 text-[#0C223B]/60" />
+            <Music className="w-2.5 h-2.5 text-[#B8A072] absolute -top-1 -right-1 opacity-90" />
           </div>
         )}
 
         {/* Hover Tooltip */}
-        <span className="absolute bottom-full mb-2 right-0 hidden group-hover:block whitespace-nowrap text-[11px] font-sans px-2.5 py-1 rounded bg-[#1E2F23] text-[#E8E4D8] shadow-lg border border-[#C5A869]/30">
+        <span className="absolute bottom-full mb-2 right-0 hidden group-hover:block whitespace-nowrap text-[11px] font-sans px-2.5 py-1 rounded bg-[#0C223B] text-[#FAF8F5] shadow-lg border border-[#B8A072]/40">
           {isPlaying ? 'Mute Music' : 'Play "Din Shagna Da"'}
         </span>
       </button>

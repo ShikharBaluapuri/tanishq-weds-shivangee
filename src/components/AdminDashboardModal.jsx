@@ -213,24 +213,24 @@ WITH CHECK (true);
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0C223B]/80 backdrop-blur-md overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-4xl bg-white rounded-3xl border border-[#C5A869]/40 shadow-2xl overflow-hidden my-6"
+        className="relative w-full max-w-4xl bg-[#FAF8F5] text-[#0C223B] rounded-3xl border border-[#B8A072]/40 shadow-[0_30px_90px_rgba(12,34,59,0.45)] overflow-hidden my-6"
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#C5A869]/30 bg-gradient-to-r from-[#F4F6F3] via-white to-[#F4F6F3]">
+        <div className="flex items-center justify-between p-5 border-b border-[#B8A072]/25 bg-[#F5F2EB]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#354F3B] text-[#E8E4D8] flex items-center justify-center">
-              <Lock className="w-4 h-4 text-[#C5A869]" />
+            <div className="w-8 h-8 rounded-full bg-[#0C223B] text-[#FAF8F5] flex items-center justify-center shadow-sm">
+              <Lock className="w-4 h-4 text-[#B8A072]" />
             </div>
             <div>
-              <h3 className="text-lg font-cormorant font-semibold text-[#1E2F23]">
+              <h3 className="text-lg font-cormorant font-medium text-[#0C223B]">
                 Family Host Hospitality Dashboard
               </h3>
-              <span className="text-[10px] font-sans text-[#7A917F] block">
+              <span className="text-[10px] font-sans text-[#526B82] block">
                 Tanishq &amp; Shivangee • Real-Time Catering &amp; Guest Headcount
               </span>
             </div>
@@ -238,7 +238,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#F4F6F3] border border-[#C5A869]/30 flex items-center justify-center text-[#1E2F23] hover:bg-[#354F3B] hover:text-white transition-all"
+            className="w-8 h-8 rounded-full bg-[#FAF8F5] border border-[#B8A072]/40 flex items-center justify-center text-[#0C223B] hover:bg-[#0C223B] hover:text-[#FAF8F5] transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -247,14 +247,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
         {/* PIN Authentication Screen */}
         {!isAuthenticated ? (
           <div className="p-8 sm:p-12 text-center max-w-sm mx-auto">
-            <div className="w-16 h-16 rounded-full bg-[#F4F6F3] border border-[#C5A869]/40 flex items-center justify-center mx-auto mb-4 text-[#354F3B]">
-              <KeyRound className="w-8 h-8 text-[#C5A869]" />
+            <div className="w-16 h-16 rounded-full bg-[#F5F2EB] border border-[#B8A072]/30 flex items-center justify-center mx-auto mb-4 text-[#0C223B]">
+              <KeyRound className="w-8 h-8 text-[#9A8052]" />
             </div>
 
-            <h4 className="text-xl font-cormorant font-semibold text-[#1E2F23] mb-1">
+            <h4 className="text-xl font-cormorant font-light text-[#0C223B] mb-1">
               Host Security Verification
             </h4>
-            <p className="text-xs text-[#7A917F] mb-6 font-sans">
+            <p className="text-xs text-[#526B82] mb-6 font-sans">
               Please enter the 4-digit family security PIN (1502).
             </p>
 
@@ -265,7 +265,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="Enter 4-digit PIN"
-                className="w-full text-center text-2xl tracking-[0.5em] py-3 rounded-2xl border border-[#C5A869]/40 focus:outline-none focus:ring-2 focus:ring-[#354F3B] font-mono bg-[#F4F6F3]/50"
+                className="w-full text-center text-2xl tracking-[0.5em] py-3 rounded-2xl border border-[#B8A072]/40 focus:outline-none focus:ring-2 focus:ring-[#0C223B] font-mono bg-white"
                 autoFocus
               />
 
@@ -277,7 +277,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] transition-all"
+                className="w-full py-2.5 rounded-full bg-[#0C223B] text-[#FAF8F5] font-cormorant uppercase tracking-[0.2em] text-xs font-medium border border-[#B8A072]/40 shadow-[0_4px_16px_rgba(12,34,59,0.2)] hover:bg-[#143256] hover:scale-105 transition-all"
               >
                 Unlock Dashboard
               </button>
@@ -287,13 +287,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
           /* Authenticated Dashboard */
           <div>
             {/* Tabs Header */}
-            <div className="flex border-b border-[#C5A869]/20 bg-[#F4F6F3] px-6 gap-4 text-xs font-sans font-semibold">
+            <div className="flex border-b border-[#C9A458]/30 bg-[#F3EFE6] px-6 gap-4 text-xs font-sans font-semibold">
               <button
                 onClick={() => setActiveTab('analytics')}
                 className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
                   activeTab === 'analytics'
-                    ? 'border-[#354F3B] text-[#354F3B]'
-                    : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
+                    ? 'border-[#081E38] text-[#081E38]'
+                    : 'border-transparent text-[#526B82] hover:text-[#081E38]'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
@@ -304,8 +304,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                 onClick={() => setActiveTab('guests')}
                 className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
                   activeTab === 'guests'
-                    ? 'border-[#354F3B] text-[#354F3B]'
-                    : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
+                    ? 'border-[#081E38] text-[#081E38]'
+                    : 'border-transparent text-[#526B82] hover:text-[#081E38]'
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -316,8 +316,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                 onClick={() => setActiveTab('setup')}
                 className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
                   activeTab === 'setup'
-                    ? 'border-[#354F3B] text-[#354F3B]'
-                    : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
+                    ? 'border-[#081E38] text-[#081E38]'
+                    : 'border-transparent text-[#526B82] hover:text-[#081E38]'
                 }`}
               >
                 <Database className="w-4 h-4" />

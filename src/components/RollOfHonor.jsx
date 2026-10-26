@@ -20,34 +20,34 @@ export default function RollOfHonor({ onOpenAdminModal }) {
   ];
 
   return (
-    <footer className="relative pt-20 pb-24 sm:pb-16 px-6 bg-[#F4F6F3] border-t border-[#C5A869]/30 overflow-hidden bg-paper-texture">
-      <div className="max-w-5xl mx-auto">
+    <footer id="family" className="relative pt-20 pb-24 sm:pb-16 px-6 bg-[radial-gradient(ellipse_at_top,#143256_0%,#0C223B_60%,#081729_100%)] border-t border-[#B8A072]/25 overflow-hidden text-[#FAF8F5]">
+      <div className="max-w-5xl mx-auto relative z-10">
         
         {/* Header */}
         <div className="text-center mb-12">
-          <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#7A917F] font-semibold">
+          <span className="font-cormorant uppercase text-[11px] tracking-[0.38em] text-[#B8A072] font-medium block">
             With Love &amp; Respect
           </span>
-          <h3 className="font-cormorant text-4xl sm:text-5xl font-normal text-[#1E2F23] mt-2 tracking-tight">
+          <h3 className="font-cormorant text-4xl sm:text-5xl font-light text-[#FAF8F5] mt-2 tracking-tight">
             Awaiting to Welcome You All
           </h3>
 
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-5">
-            <span className="font-cormorant font-medium text-2xl sm:text-3xl text-[#1E2F23]">
+            <span className="font-cormorant font-light text-2xl sm:text-3xl text-[#FAF8F5]">
               Baluapuri Family
             </span>
-            <span className="font-pinyon text-3xl text-[#C5A869]">&amp;</span>
-            <span className="font-cormorant font-medium text-2xl sm:text-3xl text-[#1E2F23]">
+            <span className="font-pinyon text-3xl text-[#B8A072]">&amp;</span>
+            <span className="font-cormorant font-light text-2xl sm:text-3xl text-[#FAF8F5]">
               Verma Family
             </span>
           </div>
 
-          <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C5A869]" />
+          <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#B8A072]" />
         </div>
 
-        {/* Best Compliments From */}
+        {/* Best Compliments From - Warm Cotton Paper Cards */}
         <div className="mb-14">
-          <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#7A917F] mb-6">
+          <h4 className="text-center font-cormorant uppercase text-[11px] tracking-[0.3em] text-[#B8A072] mb-6 font-medium">
             — Best Compliments From —
           </h4>
 
@@ -55,14 +55,17 @@ export default function RollOfHonor({ onOpenAdminModal }) {
             {BEST_COMPLIMENTS.map((member, i) => (
               <motion.div
                 key={i}
-                whileHover={{ y: -2 }}
-                className="bg-white/95 p-4 rounded-2xl border border-[#C5A869]/30 shadow-sm text-center"
+                whileHover={{ y: -3 }}
+                className="bg-[#FAF8F5] text-[#0C223B] p-4 rounded-2xl border border-[#B8A072]/30 shadow-md text-center relative overflow-hidden"
               >
-                <div className="font-cormorant font-medium text-[#1E2F23] text-base sm:text-lg">
-                  {member.title}
-                </div>
-                <div className="text-[11px] font-sans text-[#7A917F] mt-0.5">
-                  {member.relation}
+                <div className="absolute inset-1 border border-[#B8A072]/15 rounded-xl pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="font-cormorant font-medium text-[#0C223B] text-base sm:text-lg">
+                    {member.title}
+                  </div>
+                  <div className="text-[11px] font-sans text-[#526B82] mt-0.5">
+                    {member.relation}
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -70,60 +73,64 @@ export default function RollOfHonor({ onOpenAdminModal }) {
         </div>
 
         {/* Quick Contact Dock */}
-        <div className="mb-12 p-6 sm:p-8 rounded-3xl bg-white/95 border border-[#C5A869]/30 shadow-botanical">
-          <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#1E2F23] mb-1 font-semibold">
-            One-Tap Quick Contact &amp; Assistance
-          </h4>
-          <p className="text-center text-xs text-[#7A917F] mb-6 font-cormorant italic">
-            Feel free to contact our family coordinators for any travel or celebration queries.
-          </p>
+        <div className="mb-12 p-6 sm:p-8 rounded-3xl bg-[#0C223B]/80 border border-[#B8A072]/30 shadow-[0_20px_50px_rgba(8,23,41,0.5)] backdrop-blur-md relative overflow-hidden">
+          <div className="absolute inset-2 border border-[#B8A072]/20 rounded-[20px] pointer-events-none" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {CONTACTS.map((c, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/20 flex flex-col justify-between"
-              >
-                <div>
-                  <span className="text-[10px] uppercase font-sans font-medium tracking-wider text-[#7A917F] block">
-                    {c.role}
-                  </span>
-                  <strong className="text-xs font-sans font-semibold text-[#1E2F23] block mt-0.5">
-                    {c.name}
-                  </strong>
-                  <div className="text-xs font-mono font-medium text-[#1E2F23] mt-1">
-                    +91 {c.number}
+          <div className="relative z-10">
+            <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#FAF8F5] mb-1 font-medium">
+              One-Tap Quick Contact &amp; Assistance
+            </h4>
+            <p className="text-center text-xs text-[#B8A072]/85 mb-6 font-cormorant italic">
+              Feel free to contact our family coordinators for any travel or celebration queries.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {CONTACTS.map((c, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-2xl bg-[#081729]/90 border border-[#B8A072]/30 flex flex-col justify-between shadow-inner"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase font-sans font-medium tracking-wider text-[#B8A072] block">
+                      {c.role}
+                    </span>
+                    <strong className="text-xs font-sans font-medium text-[#FAF8F5] block mt-0.5">
+                      {c.name}
+                    </strong>
+                    <div className="text-xs font-mono font-medium text-[#FAF8F5]/90 mt-1">
+                      +91 {c.number}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#B8A072]/25">
+                    <a
+                      href={`tel:+91${c.number}`}
+                      className="flex-1 py-1.5 rounded-lg bg-[#0C223B] text-[#FAF8F5] border border-[#B8A072]/40 text-[11px] font-sans font-medium text-center hover:bg-[#143256] transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <Phone className="w-3 h-3 text-[#B8A072]" />
+                      <span>Call</span>
+                    </a>
+                    <a
+                      href={`https://wa.me/91${c.number}?text=${encodeURIComponent('Hello! Looking forward to attending Tanishq & Shivangee’s wedding.')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-1.5 rounded-lg bg-[#25D366] text-white text-[11px] font-sans font-medium text-center hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-1 shadow-sm"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>WhatsApp</span>
+                    </a>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#C5A869]/20">
-                  <a
-                    href={`tel:+91${c.number}`}
-                    className="flex-1 py-1.5 rounded-lg bg-[#354F3B] text-[#E8E4D8] text-[11px] font-sans font-medium text-center hover:bg-[#2A3F2F] transition-all flex items-center justify-center gap-1"
-                  >
-                    <Phone className="w-3 h-3 text-[#C5A869]" />
-                    <span>Call</span>
-                  </a>
-                  <a
-                    href={`https://wa.me/91${c.number}?text=${encodeURIComponent('Hello! Looking forward to attending Tanishq & Shivangee’s wedding.')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-1.5 rounded-lg bg-[#25D366] text-white text-[11px] font-sans font-medium text-center hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-1"
-                  >
-                    <MessageCircle className="w-3 h-3" />
-                    <span>WhatsApp</span>
-                  </a>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Bottom Footer Line & Host Login */}
-        <div className="pt-6 border-t border-[#C5A869]/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-cormorant uppercase tracking-[0.2em] text-[#7A917F]">
+        <div className="pt-6 border-t border-[#B8A072]/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-cormorant uppercase tracking-[0.2em] text-[#FAF8F5]/80">
           <div>
-            <span className="text-[#1E2F23] font-medium">Tanishq &amp; Shivangee</span>
-            <span> • 14th &amp; 15th Feb 2027</span>
+            <span className="text-[#FAF8F5] font-light">Tanishq &amp; Shivangee</span>
+            <span className="text-[#B8A072]"> • 14th &amp; 15th Feb 2027</span>
           </div>
 
           <div>
@@ -132,10 +139,10 @@ export default function RollOfHonor({ onOpenAdminModal }) {
 
           <button
             onClick={onOpenAdminModal}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] text-[#7A917F] hover:text-[#1E2F23] hover:bg-white transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] text-[#B8A072] hover:text-[#FAF8F5] hover:bg-white/10 border border-[#B8A072]/30 transition-all"
             title="Family Host Login"
           >
-            <Lock className="w-3 h-3 text-[#C5A869]" />
+            <Lock className="w-3 h-3 text-[#B8A072]" />
             <span>Family Host Login</span>
           </button>
         </div>

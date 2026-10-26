@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+import { motion } from 'framer-motion';
+import { triggerFlowerPetals } from '../services/flowerPetalEngine';
 import { 
   X, 
   CheckCircle2, 
   User, 
   Phone, 
-  Send, 
   Share2, 
   Plus, 
   Minus,
@@ -14,7 +13,6 @@ import {
   QrCode
 } from 'lucide-react';
 import { submitRsvp } from '../services/rsvpService';
-import { BotanicalDivider } from './BespokeIcons';
 
 export default function RsvpModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
@@ -107,16 +105,13 @@ export default function RsvpModal({ isOpen, onClose }) {
       const result = await submitRsvp(submissionPayload);
       setSubmittedData(result.data);
       setStep(4);
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#C5A869', '#E8E4D8', '#354F3B', '#7A917F']
-      });
+      // Royal Pushpavarsha (Flower Shower)
+      triggerFlowerPetals('pushpavarsha', 75);
     } catch (err) {
       console.error('RSVP submission error:', err);
       setSubmittedData(submissionPayload);
       setStep(4);
+      triggerFlowerPetals('pushpavarsha', 75);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,30 +136,33 @@ export default function RsvpModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E2F23]/70 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0C223B]/80 backdrop-blur-md overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="relative w-full max-w-xl bg-[#F4F6F3] rounded-3xl border border-[#C5A869]/40 shadow-2xl overflow-hidden my-6"
+        className="relative w-full max-w-xl bg-[#FAF8F5] text-[#0C223B] rounded-3xl border border-[#B8A072]/40 shadow-[0_30px_90px_rgba(12,34,59,0.45)] overflow-hidden my-6"
       >
+        {/* Inner Hairline Border */}
+        <div className="absolute inset-2 border border-[#B8A072]/20 rounded-[20px] pointer-events-none" />
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/80 border border-[#C5A869]/30 flex items-center justify-center text-[#1E2F23] hover:bg-[#354F3B] hover:text-[#E8E4D8] transition-all"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-[#FAF8F5] border border-[#B8A072]/40 flex items-center justify-center text-[#0C223B] hover:bg-[#0C223B] hover:text-[#FAF8F5] transition-all shadow-sm"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Modal Header */}
-        <div className="pt-8 pb-4 px-8 text-center border-b border-[#C5A869]/20 bg-white/50">
-          <span className="font-cormorant uppercase text-[11px] tracking-[0.3em] text-[#7A917F] font-semibold block">
+        <div className="pt-8 pb-4 px-8 text-center border-b border-[#B8A072]/25 bg-[#F5F2EB]/80 relative z-10">
+          <span className="font-cormorant uppercase text-[11px] tracking-[0.3em] text-[#9A8052] font-semibold block">
             Tanishq &amp; Shivangee • 14–15 Feb 2027
           </span>
-          <h3 className="font-cormorant text-2xl sm:text-3xl uppercase tracking-[0.2em] font-light text-[#1E2F23] mt-1">
-            {step === 4 ? 'Digital Boarding Pass' : 'Wedding RSVP'}
+          <h3 className="font-cormorant text-2xl sm:text-3xl uppercase tracking-[0.2em] font-light text-[#0C223B] mt-1">
+            {step === 4 ? 'Royal Admittance Pass' : 'Wedding RSVP'}
           </h3>
-          <p className="font-cormorant italic text-xs sm:text-sm text-[#7A917F] mt-0.5">
+          <p className="font-cormorant italic text-xs sm:text-sm text-[#526B82] mt-0.5">
             {step === 4 
               ? 'Your presence is our cherished blessing. See you in Chhindwara!' 
               : `Step ${step} of 3: ${
@@ -174,31 +172,31 @@ export default function RsvpModal({ isOpen, onClose }) {
 
           {step < 4 && (
             <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-4">
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 1 ? 'bg-[#354F3B]' : 'bg-[#C5A869]/30'}`} />
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 2 ? 'bg-[#354F3B]' : 'bg-[#C5A869]/30'}`} />
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 3 ? 'bg-[#354F3B]' : 'bg-[#C5A869]/30'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 1 ? 'bg-[#0C223B]' : 'bg-[#B8A072]/25'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 2 ? 'bg-[#0C223B]' : 'bg-[#B8A072]/25'}`} />
+              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 3 ? 'bg-[#0C223B]' : 'bg-[#B8A072]/25'}`} />
             </div>
           )}
         </div>
 
         {/* Form Body */}
-        <div className="p-7 sm:p-9">
+        <div className="p-7 sm:p-9 relative z-10">
           
           {/* STEP 1: GUEST DETAILS */}
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1">
+                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1">
                   Full Name / Family Representative <span className="text-red-700">*</span>
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-[#7A917F] absolute left-1 top-1/2 -translate-y-1/2" />
+                  <User className="w-4 h-4 text-[#B8A072] absolute left-1 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={formData.guest_name}
                     onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
                     placeholder="e.g. Dr. Rajesh Sharma &amp; Family"
-                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#354F3B]/30 text-[#1E2F23] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#354F3B]"
+                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#B8A072]/50 text-[#0C223B] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#0C223B]"
                   />
                 </div>
                 {errors.guest_name && (
@@ -207,17 +205,17 @@ export default function RsvpModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1">
+                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1">
                   WhatsApp / Phone Number <span className="text-red-700">*</span>
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-[#7A917F] absolute left-1 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-4 h-4 text-[#B8A072] absolute left-1 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="10-digit mobile number"
-                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#354F3B]/30 text-[#1E2F23] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#354F3B]"
+                    className="w-full pl-8 pr-3 py-2.5 bg-transparent border-b border-[#B8A072]/50 text-[#0C223B] placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#0C223B]"
                   />
                 </div>
                 {errors.phone && (
@@ -226,7 +224,7 @@ export default function RsvpModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-2">
+                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-2">
                   Affiliation / Guest Side
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -241,8 +239,8 @@ export default function RsvpModal({ isOpen, onClose }) {
                       onClick={() => setFormData({ ...formData, side: sideOption })}
                       className={`p-2.5 rounded-xl border text-xs font-sans text-center transition-all ${
                         formData.side === sideOption
-                          ? 'border-[#354F3B] bg-[#354F3B] text-[#E8E4D8] font-medium shadow-sm'
-                          : 'border-[#C5A869]/30 bg-white/70 text-[#1E2F23] hover:border-[#354F3B]/40'
+                          ? 'border-[#0C223B] bg-[#0C223B] text-[#FAF8F5] font-medium shadow-sm'
+                          : 'border-[#B8A072]/30 bg-white text-[#0C223B] hover:border-[#0C223B]'
                       }`}
                     >
                       {sideOption}
@@ -255,7 +253,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-7 py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] transition-all"
+                  className="px-7 py-2.5 rounded-full bg-[#0C223B] text-[#FAF8F5] font-cormorant uppercase tracking-[0.2em] text-xs font-medium hover:bg-[#143256] hover:scale-105 transition-all border border-[#B8A072]/40 shadow-[0_4px_16px_rgba(12,34,59,0.2)]"
                 >
                   Continue →
                 </button>
@@ -267,30 +265,30 @@ export default function RsvpModal({ isOpen, onClose }) {
           {step === 2 && (
             <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-2">
+                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-2">
                   Will you grace the celebrations?
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, attending: 'Joyfully Attending' })}
-                    className={`p-3 rounded-2xl border text-xs font-sans font-semibold flex items-center justify-center gap-2 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-sans font-medium flex items-center justify-center gap-2 transition-all ${
                       formData.attending === 'Joyfully Attending'
-                        ? 'border-[#354F3B] bg-[#354F3B] text-[#E8E4D8] shadow-sm'
-                        : 'border-[#C5A869]/30 bg-white/80 text-[#1E2F23]'
+                        ? 'border-[#0C223B] bg-[#0C223B] text-[#FAF8F5] shadow-sm'
+                        : 'border-[#B8A072]/30 bg-white text-[#0C223B]'
                     }`}
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#C5A869]" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#B8A072]" />
                     <span>Joyfully Attending</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, attending: 'Regretfully Declining' })}
-                    className={`p-3 rounded-2xl border text-xs font-sans font-semibold flex items-center justify-center gap-2 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-sans font-medium flex items-center justify-center gap-2 transition-all ${
                       formData.attending === 'Regretfully Declining'
-                        ? 'border-gray-800 bg-gray-800 text-white shadow-sm'
-                        : 'border-[#C5A869]/30 bg-white/80 text-[#1E2F23]'
+                        ? 'border-gray-700 bg-gray-700 text-white shadow-sm'
+                        : 'border-[#B8A072]/30 bg-white text-[#0C223B]'
                     }`}
                   >
                     <span>Regretfully Declining</span>
@@ -302,31 +300,31 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold">
+                      <label className="font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold">
                         Total Guests Attending
                       </label>
-                      <span className="text-xs text-[#7A917F]">
+                      <span className="text-xs text-[#526B82]">
                         Including yourself
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/80 border border-[#C5A869]/30">
+                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white border border-[#B8A072]/30 shadow-inner">
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, guest_count: Math.max(1, formData.guest_count - 1) })}
-                        className="w-9 h-9 rounded-xl bg-[#F4F6F3] border border-[#C5A869]/30 flex items-center justify-center text-[#1E2F23] hover:bg-[#354F3B] hover:text-[#E8E4D8] transition-all"
+                        className="w-9 h-9 rounded-xl bg-[#F5F2EB] border border-[#B8A072]/30 flex items-center justify-center text-[#0C223B] hover:bg-[#0C223B] hover:text-[#FAF8F5] transition-all"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
 
-                      <div className="flex-1 text-center font-cormorant font-bold text-3xl text-[#1E2F23]">
-                        {formData.guest_count} <span className="text-xs font-sans font-normal text-[#7A917F]">Guest(s)</span>
+                      <div className="flex-1 text-center font-cormorant font-normal text-3xl text-[#0C223B]">
+                        {formData.guest_count} <span className="text-xs font-sans font-normal text-[#526B82]">Guest(s)</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, guest_count: Math.min(10, formData.guest_count + 1) })}
-                        className="w-9 h-9 rounded-xl bg-[#F4F6F3] border border-[#C5A869]/30 flex items-center justify-center text-[#1E2F23] hover:bg-[#354F3B] hover:text-[#E8E4D8] transition-all"
+                        className="w-9 h-9 rounded-xl bg-[#F5F2EB] border border-[#B8A072]/30 flex items-center justify-center text-[#0C223B] hover:bg-[#0C223B] hover:text-[#FAF8F5] transition-all"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -334,7 +332,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
 
                   <div>
-                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-2">
+                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-2">
                       Select Celebrations You Will Attend
                     </label>
                     <div className="space-y-2">
@@ -346,19 +344,19 @@ export default function RsvpModal({ isOpen, onClose }) {
                             onClick={() => toggleEvent(event.label)}
                             className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs font-sans ${
                               isChecked
-                                ? 'border-[#354F3B] bg-white text-[#1E2F23] font-semibold shadow-sm'
-                                : 'border-[#C5A869]/20 bg-white/50 text-[#7A917F]'
+                                ? 'border-[#0C223B] bg-[#0C223B]/5 text-[#0C223B] font-medium shadow-sm'
+                                : 'border-[#B8A072]/30 bg-white/70 text-[#526B82]'
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
                               <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                isChecked ? 'bg-[#354F3B] border-[#354F3B] text-[#E8E4D8]' : 'border-gray-400 bg-white'
+                                isChecked ? 'bg-[#0C223B] border-[#0C223B] text-[#FAF8F5]' : 'border-gray-400 bg-white'
                               }`}>
                                 {isChecked && <Check className="w-3 h-3" />}
                               </div>
                               <span>{event.label}</span>
                             </div>
-                            <span className="text-[10px] uppercase font-mono text-[#7A917F]">
+                            <span className="text-[10px] uppercase font-mono text-[#9A8052]">
                               {event.venue}
                             </span>
                           </div>
@@ -373,14 +371,14 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="px-5 py-2 rounded-full border border-[#C5A869]/30 text-[#1E2F23] font-cormorant uppercase tracking-[0.15em] text-xs"
+                  className="px-5 py-2 rounded-full border border-[#B8A072]/40 text-[#0C223B] font-cormorant uppercase tracking-[0.15em] text-xs font-medium hover:bg-[#F5F2EB]"
                 >
                   ← Back
                 </button>
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-7 py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] transition-all"
+                  className="px-7 py-2.5 rounded-full bg-[#0C223B] text-[#FAF8F5] font-cormorant uppercase tracking-[0.2em] text-xs font-medium hover:bg-[#143256] hover:scale-105 transition-all border border-[#B8A072]/40 shadow-[0_4px_16px_rgba(12,34,59,0.2)]"
                 >
                   Continue →
                 </button>
@@ -395,13 +393,13 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1">
+                      <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1">
                         Mode of Travel
                       </label>
                       <select
                         value={formData.arrival_mode}
                         onChange={(e) => setFormData({ ...formData, arrival_mode: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-white/80 border border-[#C5A869]/30 text-[#1E2F23] text-xs focus:outline-none"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-[#B8A072]/30 text-[#0C223B] text-xs focus:outline-none focus:border-[#0C223B]"
                       >
                         <option value="Car">Personal Car / Road</option>
                         <option value="Train">Train (Chhindwara / Nagpur)</option>
@@ -411,7 +409,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     </div>
 
                     <div>
-                      <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1">
+                      <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1">
                         Expected Arrival Time
                       </label>
                       <input
@@ -419,13 +417,13 @@ export default function RsvpModal({ isOpen, onClose }) {
                         value={formData.arrival_date}
                         onChange={(e) => setFormData({ ...formData, arrival_date: e.target.value })}
                         placeholder="e.g. 14th Feb morning"
-                        className="w-full px-3 py-2 rounded-xl bg-white/80 border border-[#C5A869]/30 text-[#1E2F23] text-xs focus:outline-none"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-[#B8A072]/30 text-[#0C223B] text-xs focus:outline-none focus:border-[#0C223B]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1.5">
+                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1.5">
                       Accommodation Required?
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -434,8 +432,8 @@ export default function RsvpModal({ isOpen, onClose }) {
                         onClick={() => setFormData({ ...formData, needs_accommodation: 'Yes' })}
                         className={`p-2.5 rounded-xl border text-xs font-sans transition-all ${
                           formData.needs_accommodation === 'Yes'
-                            ? 'border-[#354F3B] bg-[#354F3B] text-[#E8E4D8] font-medium'
-                            : 'border-[#C5A869]/30 bg-white/70 text-[#1E2F23]'
+                            ? 'border-[#0C223B] bg-[#0C223B] text-[#FAF8F5] font-medium'
+                            : 'border-[#B8A072]/30 bg-white text-[#0C223B]'
                         }`}
                       >
                         Yes, Please Arrange Room
@@ -445,8 +443,8 @@ export default function RsvpModal({ isOpen, onClose }) {
                         onClick={() => setFormData({ ...formData, needs_accommodation: 'No' })}
                         className={`p-2.5 rounded-xl border text-xs font-sans transition-all ${
                           formData.needs_accommodation === 'No'
-                            ? 'border-[#354F3B] bg-[#354F3B] text-[#E8E4D8] font-medium'
-                            : 'border-[#C5A869]/30 bg-white/70 text-[#1E2F23]'
+                            ? 'border-[#0C223B] bg-[#0C223B] text-[#FAF8F5] font-medium'
+                            : 'border-[#B8A072]/30 bg-white text-[#0C223B]'
                         }`}
                       >
                         No, Making Own Arrangements
@@ -457,7 +455,7 @@ export default function RsvpModal({ isOpen, onClose }) {
               )}
 
               <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#1E2F23] font-semibold mb-1">
+                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#0C223B] font-semibold mb-1">
                   Aashish Vachan • Personal Blessing Note
                 </label>
                 <textarea
@@ -465,7 +463,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   value={formData.blessing_message}
                   onChange={(e) => setFormData({ ...formData, blessing_message: e.target.value })}
                   placeholder="Share your warm blessings and wishes for Tanishq &amp; Shivangee..."
-                  className="w-full p-3 rounded-2xl bg-white/80 border border-[#C5A869]/30 text-[#1E2F23] placeholder:text-gray-400 text-xs focus:outline-none focus:border-[#354F3B]"
+                  className="w-full p-3 rounded-2xl bg-white border border-[#B8A072]/30 text-[#0C223B] placeholder:text-gray-400 text-xs focus:outline-none focus:border-[#0C223B]"
                 />
               </div>
 
@@ -473,7 +471,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="px-5 py-2 rounded-full border border-[#C5A869]/30 text-[#1E2F23] font-cormorant uppercase tracking-[0.15em] text-xs"
+                  className="px-5 py-2 rounded-full border border-[#B8A072]/40 text-[#0C223B] font-cormorant uppercase tracking-[0.15em] text-xs font-medium hover:bg-[#F5F2EB]"
                 >
                   ← Back
                 </button>
@@ -482,7 +480,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="px-8 py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold border border-[#C5A869]/40 hover:bg-[#2A3F2F] transition-all flex items-center gap-2"
+                  className="px-8 py-2.5 rounded-full bg-[#0C223B] text-[#FAF8F5] font-cormorant uppercase tracking-[0.2em] text-xs font-medium border border-[#B8A072]/40 hover:bg-[#143256] hover:scale-105 transition-all flex items-center gap-2 shadow-[0_8px_20px_-4px_rgba(12,34,59,0.25)]"
                 >
                   {isSubmitting ? 'Confirming...' : 'Confirm RSVP'}
                 </button>
@@ -493,54 +491,56 @@ export default function RsvpModal({ isOpen, onClose }) {
           {/* STEP 4: DIGITAL BOARDING PASS */}
           {step === 4 && submittedData && (
             <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-              <div className="relative bg-white rounded-3xl p-6 sm:p-8 border border-[#C5A869]/40 shadow-botanical overflow-hidden">
-                <div className="flex items-center justify-between pb-4 border-b border-[#C5A869]/20">
+              <div className="relative bg-white rounded-3xl p-6 sm:p-8 border border-[#B8A072]/40 shadow-md overflow-hidden">
+                <div className="absolute inset-1.5 border border-[#B8A072]/20 rounded-2xl pointer-events-none" />
+
+                <div className="relative z-10 flex items-center justify-between pb-4 border-b border-[#B8A072]/25">
                   <div>
-                    <span className="font-cormorant uppercase text-[10px] tracking-[0.25em] text-[#7A917F] font-semibold block">
+                    <span className="font-cormorant uppercase text-[10px] tracking-[0.25em] text-[#9A8052] font-semibold block">
                       Wedding Admittance Pass
                     </span>
-                    <h4 className="font-pinyon text-3xl text-[#1E2F23]">
+                    <h4 className="font-cormorant text-2xl font-light italic text-[#0C223B]">
                       Tanishq &amp; Shivangee
                     </h4>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-[#EAEee8] text-[#354F3B] border border-[#354F3B]/30 text-[10px] font-sans font-bold uppercase">
+                  <span className="px-3 py-1 rounded-full bg-[#0C223B] text-[#FAF8F5] text-[10px] font-sans font-medium uppercase shadow-sm">
                     Confirmed
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-4 border-b border-dashed border-[#C5A869]/30 text-xs font-sans">
+                <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 py-4 border-b border-dashed border-[#B8A072]/30 text-xs font-sans">
                   <div>
-                    <span className="text-[10px] text-[#7A917F] uppercase block">Guest</span>
-                    <strong className="text-[#1E2F23] font-cormorant text-sm block truncate">
+                    <span className="text-[10px] text-[#526B82] uppercase block">Guest</span>
+                    <strong className="text-[#0C223B] font-cormorant text-base block truncate font-medium">
                       {submittedData.guest_name}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#7A917F] uppercase block">Headcount</span>
-                    <strong className="text-[#1E2F23] font-cormorant text-sm block">
+                    <span className="text-[10px] text-[#526B82] uppercase block">Headcount</span>
+                    <strong className="text-[#0C223B] font-cormorant text-base block font-medium">
                       {submittedData.guest_count || 1} Guest(s)
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#7A917F] uppercase block">Side</span>
-                    <strong className="text-[#1E2F23] text-xs block truncate">
+                    <span className="text-[10px] text-[#526B82] uppercase block">Side</span>
+                    <strong className="text-[#0C223B] text-xs block truncate font-medium">
                       {submittedData.side}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#7A917F] uppercase block">Venue</span>
-                    <strong className="text-[#1E2F23] text-xs block">
+                    <span className="text-[10px] text-[#526B82] uppercase block">Venue</span>
+                    <strong className="text-[#0C223B] text-xs block font-medium">
                       The Waterstone
                     </strong>
                   </div>
                 </div>
 
                 {submittedData.attending === 'Joyfully Attending' && (
-                  <div className="py-4 border-b border-[#C5A869]/20 text-xs font-sans">
-                    <span className="text-[10px] text-[#7A917F] uppercase block font-semibold mb-2">
+                  <div className="relative z-10 py-4 border-b border-[#B8A072]/25 text-xs font-sans">
+                    <span className="text-[10px] text-[#9A8052] uppercase block font-semibold mb-2">
                       Events Checklist:
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[#1E2F23]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[#0C223B]">
                       {(submittedData.events_attending || []).map((ev, i) => (
                         <div key={i} className="flex items-center gap-1.5">
                           <Check className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
@@ -551,14 +551,14 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </div>
                 )}
 
-                <div className="pt-4 flex items-center justify-between text-xs font-sans">
+                <div className="relative z-10 pt-4 flex items-center justify-between text-xs font-sans">
                   <div>
-                    <span className="text-[10px] text-[#7A917F] block">Host Contact:</span>
-                    <span className="font-semibold text-[#1E2F23]">9425006278 • 8623876930</span>
+                    <span className="text-[10px] text-[#526B82] block">Host Contact:</span>
+                    <span className="font-medium text-[#0C223B]">9425006278 • 8623876930</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <QrCode className="w-7 h-7 text-[#1E2F23]/70" />
-                    <span className="text-[9px] font-mono uppercase text-[#7A917F]">
+                    <QrCode className="w-7 h-7 text-[#0C223B]" />
+                    <span className="text-[9px] font-mono uppercase text-[#9A8052] font-semibold">
                       14–15 FEB 2027
                     </span>
                   </div>
@@ -570,7 +570,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   href={getWhatsAppShareUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-3 rounded-full bg-[#25D366] text-white font-sans font-semibold text-xs tracking-wider uppercase shadow-sm hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-full bg-[#25D366] text-white font-sans font-medium text-xs tracking-wider uppercase shadow-sm hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-2"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Send Confirmation on WhatsApp</span>
@@ -578,7 +578,7 @@ export default function RsvpModal({ isOpen, onClose }) {
 
                 <button
                   onClick={onClose}
-                  className="px-6 py-3 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] transition-all"
+                  className="px-6 py-3 rounded-full bg-[#0C223B] text-[#FAF8F5] border border-[#B8A072]/40 font-cormorant uppercase tracking-[0.2em] text-xs font-medium hover:bg-[#143256] transition-all"
                 >
                   Done
                 </button>

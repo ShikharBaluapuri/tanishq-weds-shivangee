@@ -10,6 +10,7 @@ import RsvpModal from './components/RsvpModal';
 import AdminDashboardModal from './components/AdminDashboardModal';
 import AudioPlayer from './components/AudioPlayer';
 import MobileNavigation from './components/MobileNavigation';
+import { FlowerPetalShower } from './services/flowerPetalEngine';
 
 export default function App() {
   const [isRsvpOpen, setIsRsvpOpen] = useState(false);
@@ -28,7 +29,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F3] text-[#1E2F23] relative font-sans">
+    <div className="min-h-screen bg-[#F7F4EE] text-[#0C223B] relative font-sans selection:bg-[#B8A072]/25 selection:text-[#0C223B]">
+      {/* Global Organic Falling Flower Petals Canvas */}
+      <FlowerPetalShower />
+
       {/* 1. Wax Seal Envelope Preloader (Full screen initial experience) */}
       <WaxSealPreloader onOpenInvitation={handleOpenInvitation} />
 
