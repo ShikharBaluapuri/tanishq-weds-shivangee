@@ -73,9 +73,8 @@
   background: rgba(65, 88, 76, 0.4);
 }
 
-/* Authentic Handmade Cotton Paper Texture */
+/* Authentic Handmade Cotton Paper Texture Pattern */
 .bg-paper-texture {
-  background-color: var(--antique-ivory);
   background-image: 
     radial-gradient(circle at 50% 50%, rgba(195, 165, 107, 0.03) 0%, transparent 70%),
     radial-gradient(rgba(52, 63, 53, 0.025) 1px, transparent 1px);

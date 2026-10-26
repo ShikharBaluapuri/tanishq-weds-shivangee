@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 /**
  * Delicate White Jasmine Flowers & Olive / Sage Leaves Sprig
@@ -111,16 +112,38 @@ export function GaneshaIcon({ className = "w-8 h-8 text-botanical-brass" }) {
 }
 
 /**
- * Minimalist Botanical Branch Divider
+ * Minimalist Botanical Branch Divider with delicate self-drawing animation
  */
 export function BotanicalDivider({ className = "w-full max-w-xs my-6 text-botanical-brass/50" }) {
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`}>
-      <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-current opacity-40" />
-      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+      <motion.div 
+        initial={{ scaleX: 0, originX: 1 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true, margin: '-20px' }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-current opacity-40" 
+      />
+      <motion.svg 
+        initial={{ opacity: 0, scale: 0.6 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, margin: '-20px' }}
+        transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="w-5 h-5 flex-shrink-0" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="1.2"
+      >
         <path d="M12 2 C13 7, 16 10, 22 12 C16 14, 13 17, 12 22 C11 17, 8 14, 2 12 C8 10, 11 7, 12 2 Z" />
-      </svg>
-      <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-current opacity-40" />
+      </motion.svg>
+      <motion.div 
+        initial={{ scaleX: 0, originX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true, margin: '-20px' }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-current opacity-40" 
+      />
     </div>
   );
 }

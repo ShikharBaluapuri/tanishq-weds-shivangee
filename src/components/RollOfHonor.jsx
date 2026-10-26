@@ -24,8 +24,14 @@ export default function RollOfHonor({ onOpenAdminModal }) {
     <footer className="relative pt-20 pb-24 sm:pb-16 px-4 sm:px-6 bg-[#F5F0E5] border-t border-[#C3A56B]/30 overflow-hidden bg-paper-texture">
       <div className="max-w-5xl mx-auto">
         
-        {/* Header with Monogram Crest */}
-        <div className="text-center mb-12 flex flex-col items-center">
+        {/* Header with Monogram Crest & Luxury Scroll Reveal */}
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-12 flex flex-col items-center"
+        >
           <img
             src="/monogram_gold_transparent.png"
             alt="Tanishq &amp; Shivangee Crest"
@@ -50,11 +56,17 @@ export default function RollOfHonor({ onOpenAdminModal }) {
           </div>
 
           <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C3A56B]" />
-        </div>
+        </motion.div>
 
         {/* Best Compliments From */}
-        <div className="mb-14">
-          <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#657968] mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-30px' }}
+          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-14"
+        >
+          <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#657968] mb-6 font-semibold">
             — Best Compliments From —
           </h4>
 
@@ -62,8 +74,9 @@ export default function RollOfHonor({ onOpenAdminModal }) {
             {BEST_COMPLIMENTS.map((member, i) => (
               <motion.div
                 key={i}
-                whileHover={{ y: -2 }}
-                className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#C3A56B]/30 shadow-sm text-center"
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
+                className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#C3A56B]/30 hover:border-[#C3A56B]/60 shadow-sm text-center transition-colors"
               >
                 <div className="font-cormorant font-medium text-[#343F35] text-base sm:text-lg">
                   {member.title}
@@ -74,10 +87,16 @@ export default function RollOfHonor({ onOpenAdminModal }) {
               </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Quick Contact Dock */}
-        <div className="mb-12 p-6 sm:p-8 rounded-3xl bg-[#FDFBF7] border border-[#C3A56B]/30 shadow-botanical">
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-12 p-6 sm:p-8 rounded-3xl bg-[#FDFBF7] border border-[#C3A56B]/30 shadow-botanical"
+        >
           <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#343F35] mb-1 font-semibold">
             One-Tap Quick Contact &amp; Assistance
           </h4>
@@ -87,9 +106,11 @@ export default function RollOfHonor({ onOpenAdminModal }) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {CONTACTS.map((c, i) => (
-              <div
+              <motion.div
                 key={i}
-                className="p-4 rounded-2xl bg-[#EAE2D3]/50 border border-[#C3A56B]/20 flex flex-col justify-between"
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 rounded-2xl bg-[#EAE2D3]/50 border border-[#C3A56B]/20 hover:border-[#C3A56B]/50 flex flex-col justify-between transition-colors shadow-xs"
               >
                 <div>
                   <span className="text-[10px] uppercase font-sans font-medium tracking-wider text-[#657968] block">
@@ -106,7 +127,7 @@ export default function RollOfHonor({ onOpenAdminModal }) {
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#C3A56B]/20">
                   <a
                     href={`tel:+91${c.number}`}
-                    className="flex-1 py-1.5 rounded-lg bg-[#41584C] text-[#F5F0E5] text-[11px] font-sans font-medium text-center hover:bg-[#2C3E34] transition-all flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 rounded-lg bg-[#41584C] text-[#F5F0E5] text-[11px] font-sans font-medium text-center hover:bg-[#2C3E34] transition-all flex items-center justify-center gap-1 shadow-xs"
                   >
                     <Phone className="w-3 h-3 text-[#C3A56B]" />
                     <span>Call</span>
@@ -115,16 +136,16 @@ export default function RollOfHonor({ onOpenAdminModal }) {
                     href={`https://wa.me/91${c.number}?text=${encodeURIComponent('Hello! Looking forward to attending Tanishq & Shivangee’s wedding.')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-1.5 rounded-lg bg-[#25D366] text-white text-[11px] font-sans font-medium text-center hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 rounded-lg bg-[#25D366] text-white text-[11px] font-sans font-medium text-center hover:bg-[#1EBE5D] transition-all flex items-center justify-center gap-1 shadow-xs"
                   >
                     <MessageCircle className="w-3 h-3" />
                     <span>WhatsApp</span>
                   </a>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Bottom Footer Line & Host Login */}
         <div className="pt-6 border-t border-[#C3A56B]/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-cormorant uppercase tracking-[0.2em] text-[#657968]">

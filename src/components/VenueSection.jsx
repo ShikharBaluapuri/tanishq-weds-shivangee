@@ -44,8 +44,14 @@ export default function VenueSection() {
     <section id="venue-section" className="relative py-24 px-4 sm:px-6 bg-[#F5F0E5] overflow-hidden bg-paper-texture">
       <div className="max-w-5xl mx-auto">
         
-        {/* Section Header */}
-        <div className="text-center mb-14">
+        {/* Section Header with Refined Scroll Reveal */}
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-14"
+        >
           <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#657968] font-semibold">
             Location &amp; Concierge
           </span>
@@ -56,7 +62,7 @@ export default function VenueSection() {
             The Waterstone Resort • Nagpur Road, Chhindwara, Madhya Pradesh
           </p>
           <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C3A56B]" />
-        </div>
+        </motion.div>
 
         {/* Grid: Resort Card + Residence Concierge */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

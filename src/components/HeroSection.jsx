@@ -62,20 +62,38 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
 
         {/* Custom Monogram Heirloom Crest */}
         <div className="flex flex-col items-center justify-center mb-4">
-          <img
+          <motion.img
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             src="/monogram_gold_transparent.png"
             alt="Tanishq &amp; Shivangee Royal Crest"
             className="w-16 h-20 sm:w-20 sm:h-24 object-contain filter drop-shadow-sm mb-2"
           />
-          <h3 className="font-devanagari text-[#A78343] text-xs sm:text-sm tracking-normal font-normal">
+          <motion.h3 
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="font-devanagari text-[#A78343] text-xs sm:text-sm tracking-normal font-normal"
+          >
             ॥ श्री गणेशाय नमः ॥
-          </h3>
-          <p className="font-devanagari text-[11px] sm:text-xs text-[#657968] tracking-normal mt-0.5 max-w-md mx-auto leading-relaxed opacity-90">
+          </motion.h3>
+          <motion.p 
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="font-devanagari text-[11px] sm:text-xs text-[#657968] tracking-normal mt-0.5 max-w-md mx-auto leading-relaxed opacity-90"
+          >
             विघ्न हरण मंगल करण, गौरी पुत्र गणेश • प्रथम निमंत्रण आपको ब्रह्मा, विष्णु, महेश
-          </p>
-          <span className="font-devanagari text-xs text-[#A78343] font-medium mt-1">
+          </motion.p>
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="font-devanagari text-xs text-[#A78343] font-medium mt-1"
+          >
             ॥ शुभविवाह ॥
-          </span>
+          </motion.span>
         </div>
 
         {/* Grandparents & Blessings Lineage */}
@@ -96,20 +114,49 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
 
         <BotanicalDivider className="w-full max-w-xs mx-auto my-4 text-[#C3A56B]" />
 
-        {/* Couple's Names Centerpiece - Single Line Typography */}
+        {/* Couple's Names Centerpiece - Single Line Typography with Cinematic Reveal */}
         <div className="my-4 sm:my-6 space-y-2">
-          <h2
+          <motion.h2
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
             style={{ fontFamily: "'Pinyon Script', 'Great Vibes', cursive" }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] text-[#343F35] font-normal leading-tight py-1 drop-shadow-sm whitespace-nowrap tracking-wide"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] text-[#343F35] font-normal leading-tight py-1 drop-shadow-sm whitespace-nowrap tracking-wide inline-flex items-center justify-center"
           >
-            Tanishq <span className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl text-[#C3A56B] mx-1 sm:mx-2 font-light">&amp;</span> Shivangee
-          </h2>
+            <motion.span
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              Tanishq
+            </motion.span>
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl text-[#C3A56B] mx-1 sm:mx-2.5 font-light"
+            >
+              &amp;
+            </motion.span>
+            <motion.span
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            >
+              Shivangee
+            </motion.span>
+          </motion.h2>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.2em] text-[#657968] pt-0.5">
+          <motion.div 
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.2em] text-[#657968] pt-0.5"
+          >
             <span>Son of Dr. Nidhi &amp; Mr. Manish Baluapuri</span>
             <span className="hidden sm:inline text-[#C3A56B]">•</span>
             <span>Daughter of Mrs. Shweta &amp; Mr. Tarun Kushwah</span>
-          </div>
+          </motion.div>
         </div>
 
         {/* Auspicious Date & Venue Pill Badge */}

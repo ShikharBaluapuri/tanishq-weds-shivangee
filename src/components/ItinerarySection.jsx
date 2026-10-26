@@ -151,8 +151,14 @@ export default function ItinerarySection() {
     <section id="itinerary" className="itinerary-section relative py-24 px-4 sm:px-6 overflow-hidden transition-colors duration-700 bg-paper-texture">
       <div className="max-w-5xl mx-auto">
         
-        {/* Section Header */}
-        <div className="text-center mb-14">
+        {/* Section Header with Refined Scroll Reveal */}
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-14"
+        >
           <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#657968] font-semibold">
             Wedding Itinerary
           </span>
@@ -188,7 +194,7 @@ export default function ItinerarySection() {
               Day 2 • 15th Feb (The Wedding)
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Cohesive Botanical Event Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
@@ -200,11 +206,12 @@ export default function ItinerarySection() {
               return (
                 <motion.div
                   key={event.id}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className={`relative rounded-3xl p-7 sm:p-9 bg-[#FDFBF7] border border-[#C3A56B]/30 shadow-botanical hover:shadow-brass-glow transition-all duration-300 flex flex-col justify-between ${
+                  whileHover={{ y: -5, transition: { duration: 0.25, ease: 'easeOut' } }}
+                  transition={{ duration: 0.5, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                  className={`group relative rounded-3xl p-7 sm:p-9 bg-[#FDFBF7] border border-[#C3A56B]/30 hover:border-[#C3A56B]/70 shadow-botanical hover:shadow-xl transition-colors duration-300 flex flex-col justify-between ${
                     isFullWidth ? 'md:col-span-2' : ''
                   }`}
                 >

@@ -47,8 +47,14 @@ export default function WallOfBlessings({ onOpenBlessingModal }) {
     <section id="blessings" className="relative py-24 px-4 sm:px-6 bg-[#EAE2D3]/40 overflow-hidden bg-paper-texture">
       <div className="max-w-5xl mx-auto">
         
-        {/* Section Title */}
-        <div className="text-center mb-14">
+        {/* Section Title with Luxury Scroll Reveal */}
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-14"
+        >
           <span className="font-cormorant uppercase text-xs tracking-[0.3em] text-[#657968] font-semibold">
             Aashish Vachan
           </span>
@@ -62,12 +68,12 @@ export default function WallOfBlessings({ onOpenBlessingModal }) {
 
           <button
             onClick={onOpenBlessingModal}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/95 border border-[#C3A56B]/40 text-[#343F35] text-xs font-cormorant uppercase tracking-[0.2em] font-medium hover:bg-[#F5F0E5] transition-all shadow-sm mt-1"
+            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/95 border border-[#C3A56B]/40 text-[#343F35] text-xs font-cormorant uppercase tracking-[0.2em] font-medium hover:bg-[#F5F0E5] hover:border-[#C3A56B] transition-all shadow-sm mt-1"
           >
             <Plus className="w-3.5 h-3.5 text-[#C3A56B]" />
             <span>Send Your Blessing</span>
           </button>
-        </div>
+        </motion.div>
 
         {/* Blessings Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -77,8 +83,9 @@ export default function WallOfBlessings({ onOpenBlessingModal }) {
               initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
+              whileHover={{ y: -4 }}
               transition={{ duration: 0.4, delay: (idx % 3) * 0.1 }}
-              className="bg-[#FDFBF7] rounded-2xl p-6 border border-[#C3A56B]/30 shadow-botanical hover:shadow-brass-glow transition-all duration-300 flex flex-col justify-between"
+              className="bg-[#FDFBF7] rounded-2xl p-6 border border-[#C3A56B]/30 hover:border-[#C3A56B]/60 shadow-botanical hover:shadow-brass-glow transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
