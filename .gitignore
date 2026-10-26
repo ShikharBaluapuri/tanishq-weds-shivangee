@@ -11,3 +11,7 @@ edge_temp
 extracted_assets/
 
 .vercel
+.data/
+test_*.cjs
+verify_*.cjs
+scratch_*.cjs

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import WaxSealPreloader from './components/WaxSealPreloader';
 import HeroSection from './components/HeroSection';
@@ -15,6 +15,21 @@ export default function App() {
   const [isRsvpOpen, setIsRsvpOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [hasOpenedInvitation, setHasOpenedInvitation] = useState(false);
+
+  // Lock body scroll while opening envelope is visible, unlock cleanly when opened
+  useEffect(() => {
+    if (!hasOpenedInvitation) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [hasOpenedInvitation]);
 
   const handleOpenInvitation = () => {
     setHasOpenedInvitation(true);
@@ -68,7 +83,7 @@ export default function App() {
         onClose={() => setIsRsvpOpen(false)} 
       />
 
-      {/* 7. Secret Family Host Admin Dashboard Modal (PIN: 1502) */}
+      {/* 7. Family Host Admin Dashboard Modal */}
       <AdminDashboardModal 
         isOpen={isAdminOpen} 
         onClose={() => setIsAdminOpen(false)} 

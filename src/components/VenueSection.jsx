@@ -177,7 +177,7 @@ export default function VenueSection() {
 
               <div className="flex gap-2">
                 <a
-                  href="https://www.google.com/maps/dir/?api=1&destination=House+89+White+Bungalow+Adarsh+Nagar+Parasia+Road+Chhindwara+Madhya+Pradesh+480001"
+                  href="https://maps.app.goo.gl/eeZJ91HzoFJ98fed7"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 py-2 rounded-full border border-[#C3A56B]/30 bg-white text-[#343F35] hover:bg-[#EAE2D3]/40 font-cormorant uppercase tracking-[0.15em] text-xs text-center transition-all flex items-center justify-center gap-1.5"
@@ -205,25 +205,28 @@ export default function VenueSection() {
                 Airport: Nagpur International Airport (NAG) ~ 125 km (2.5 hrs). Stations: Chhindwara (CWA) &amp; Nagpur (NGP).
               </p>
 
-              <div className="space-y-2 text-xs font-sans">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 border border-white/10">
-                  <span className="text-[#F5F0E5]/90">Main Host Desk</span>
-                  <a href="tel:+919425006278" className="font-semibold text-[#E0CB9B] hover:underline">
-                    +91 9425006278
-                  </a>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 border border-white/10">
-                  <span className="text-[#F5F0E5]/90">Guest Care &amp; Rooms</span>
-                  <a href="tel:+918454046248" className="font-semibold text-[#E0CB9B] hover:underline">
-                    +91 8454046248
-                  </a>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 border border-white/10">
-                  <span className="text-[#F5F0E5]/90">Logistics &amp; Arrival</span>
-                  <a href="tel:+918623876930" className="font-semibold text-[#E0CB9B] hover:underline">
-                    +91 8623876930
-                  </a>
-                </div>
+              <div className="space-y-2.5 text-xs font-sans">
+                {[
+                  { name: 'Manish Baluapuri', phone: '+91 9425006278', tel: '+919425006278' },
+                  { name: 'Shikhar Baluapuri', phone: '+91 8623876930', tel: '+918623876930' },
+                  { name: 'Tanishq Baluapuri', phone: '+91 9167166675', tel: '+919167166675' }
+                ].map((contact, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/10 border border-white/10 hover:border-[#C3A56B]/40 hover:bg-white/15 transition-all"
+                  >
+                    <span className="text-[#F5F0E5] font-medium tracking-wide">
+                      {contact.name}
+                    </span>
+                    <a
+                      href={`tel:${contact.tel}`}
+                      className="inline-flex items-center gap-1.5 font-semibold text-[#E0CB9B] hover:text-white transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-[#C3A56B]" />
+                      <span>{contact.phone}</span>
+                    </a>
+                  </div>
+                ))}
               </div>
             </div>
 

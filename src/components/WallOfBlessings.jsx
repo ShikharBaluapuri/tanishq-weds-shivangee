@@ -4,19 +4,38 @@ import { Heart, MessageSquareHeart, Plus } from 'lucide-react';
 import { getAllRsvps, subscribeToRsvps, INITIAL_BLESSINGS } from '../services/rsvpService';
 import { BotanicalDivider } from './BespokeIcons';
 
+const EXCLUDED_BLESSINGS = [
+  'rajshree',
+  'shailesh baluapuri',
+  'tanvi, chetna',
+  'tanvi'
+];
+
+const isExcludedGuest = (name) => {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  return EXCLUDED_BLESSINGS.some(ex => lower.includes(ex));
+};
+
 export default function WallOfBlessings({ onOpenBlessingModal }) {
-  const [blessings, setBlessings] = useState(INITIAL_BLESSINGS);
+  const [blessings, setBlessings] = useState(() => 
+    INITIAL_BLESSINGS.filter(b => !isExcludedGuest(b.guest_name))
+  );
 
   useEffect(() => {
     getAllRsvps().then((data) => {
       if (data && data.length > 0) {
-        const withBlessings = data.filter(r => r.blessing_message && r.blessing_message.trim().length > 0);
-        setBlessings(withBlessings.length > 0 ? withBlessings : INITIAL_BLESSINGS);
+        const withBlessings = data.filter(r => 
+          r.blessing_message && 
+          r.blessing_message.trim().length > 0 && 
+          !isExcludedGuest(r.guest_name)
+        );
+        setBlessings(withBlessings.length > 0 ? withBlessings : INITIAL_BLESSINGS.filter(b => !isExcludedGuest(b.guest_name)));
       }
     });
 
     const unsubscribe = subscribeToRsvps((newRsvp) => {
-      if (newRsvp && newRsvp.blessing_message && newRsvp.blessing_message.trim().length > 0) {
+      if (newRsvp && newRsvp.blessing_message && newRsvp.blessing_message.trim().length > 0 && !isExcludedGuest(newRsvp.guest_name)) {
         setBlessings(prev => [newRsvp, ...prev.filter(b => b.id !== newRsvp.id)]);
       }
     });

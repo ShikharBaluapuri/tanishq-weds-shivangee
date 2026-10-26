@@ -96,16 +96,16 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
 
         <BotanicalDivider className="w-full max-w-xs mx-auto my-4 text-[#C3A56B]" />
 
-        {/* Couple's Names Centerpiece */}
-        <div className="my-5 space-y-1.5">
+        {/* Couple's Names Centerpiece - Single Line Typography */}
+        <div className="my-4 sm:my-6 space-y-2">
           <h2
             style={{ fontFamily: "'Pinyon Script', 'Great Vibes', cursive" }}
-            className="text-6xl sm:text-7xl md:text-8xl text-[#343F35] leading-none py-1 drop-shadow-sm"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] text-[#343F35] font-normal leading-tight py-1 drop-shadow-sm whitespace-nowrap tracking-wide"
           >
-            Tanishq <span className="font-cormorant italic text-3xl sm:text-5xl text-[#C3A56B] font-light">&amp;</span> Shivangee
+            Tanishq <span className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl text-[#C3A56B] mx-1 sm:mx-2 font-light">&amp;</span> Shivangee
           </h2>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.18em] text-[#657968] pt-1">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-6 text-xs font-cormorant uppercase tracking-[0.2em] text-[#657968] pt-0.5">
             <span>Son of Dr. Nidhi &amp; Mr. Manish Baluapuri</span>
             <span className="hidden sm:inline text-[#C3A56B]">•</span>
             <span>Daughter of Mrs. Shweta &amp; Mr. Tarun Kushwah</span>

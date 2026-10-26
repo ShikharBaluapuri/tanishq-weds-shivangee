@@ -1,23 +1,319 @@
 import { createWhatsAppLink, formatRsvpConfirmation } from '../lib/whatsapp';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import { 
   X, 
   CheckCircle2, 
   User, 
   Phone, 
-  Send, 
   Share2, 
   Plus, 
   Minus, 
   Check, 
   QrCode, 
   LoaderCircle, 
-  AlertCircle 
+  AlertCircle,
+  Calendar,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import { submitRsvp } from '../services/rsvpService';
 import { BotanicalDivider } from './BespokeIcons';
+import { triggerFloralShower } from './FloralPetalsEngine';
+
+/**
+ * Bespoke Wedding Stationery Date Picker
+ * Allows guests to pick a real date on an elegant ivory & sage calendar
+ */
+function WeddingDatePicker({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(() => new Date(2027, 1, 1)); // Default view Feb 2027
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayIndex = new Date(year, month, 1).getDay();
+
+  const handlePrevMonth = (e) => {
+    e.stopPropagation();
+    setViewDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = (e) => {
+    e.stopPropagation();
+    setViewDate(new Date(year, month + 1, 1));
+  };
+
+  const selectDay = (day) => {
+    const formatted = `${day} ${monthNames[month]} ${year}`;
+    onChange(formatted);
+    setIsOpen(false);
+  };
+
+  const quickDates = [
+    { label: '13 Feb (Pre-wedding)', val: '13 February 2027' },
+    { label: '14 Feb (Day 1)', val: '14 February 2027' },
+    { label: '15 Feb (Day 2)', val: '15 February 2027' }
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-[#C3A56B]/35 text-xs text-left focus:outline-none focus:border-[#41584C] hover:border-[#41584C]/50 transition-all shadow-sm group"
+      >
+        <div className="flex items-center gap-2.5 truncate">
+          <Calendar className="w-4 h-4 text-[#C3A56B] flex-shrink-0" />
+          <span className={value ? 'text-[#343F35] font-medium' : 'text-gray-400'}>
+            {value || 'Select Arrival Date'}
+          </span>
+        </div>
+        <span className="text-[10px] uppercase font-cormorant tracking-widest text-[#657968] group-hover:text-[#41584C]">
+          {isOpen ? 'Close' : 'Choose'}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 z-40 mt-1.5 p-3.5 bg-[#FDFBF7] rounded-2xl border border-[#C3A56B]/40 shadow-xl bg-paper-texture">
+          {/* Calendar Header */}
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#C3A56B]/20">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1 rounded-lg hover:bg-[#EAE2D3] text-[#343F35] transition-colors"
+              aria-label="Previous Month"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-cormorant font-semibold text-sm text-[#343F35] tracking-wide">
+              {monthNames[month]} {year}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1 rounded-lg hover:bg-[#EAE2D3] text-[#343F35] transition-colors"
+              aria-label="Next Month"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Dates Chips */}
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {quickDates.map((q) => (
+              <button
+                key={q.val}
+                type="button"
+                onClick={() => { onChange(q.val); setIsOpen(false); }}
+                className={`text-[10px] font-sans px-2 py-0.5 rounded-full border transition-all ${
+                  value === q.val
+                    ? 'bg-[#41584C] text-[#F5F0E5] border-[#41584C] font-medium'
+                    : 'bg-white text-[#657968] border-[#C3A56B]/30 hover:border-[#41584C]'
+                }`}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Day of Week Headers */}
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-sans uppercase font-medium text-[#657968] mb-1">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+              <span key={d}>{d}</span>
+            ))}
+          </div>
+
+          {/* Days Grid */}
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {Array.from({ length: firstDayIndex }).map((_, idx) => (
+              <span key={`empty-${idx}`} />
+            ))}
+
+            {Array.from({ length: daysInMonth }).map((_, idx) => {
+              const day = idx + 1;
+              const formattedDate = `${day} ${monthNames[month]} ${year}`;
+              const isSelected = value === formattedDate;
+              const isWeddingDay = year === 2027 && month === 1 && (day === 14 || day === 15);
+
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => selectDay(day)}
+                  className={`h-7 w-7 mx-auto rounded-lg text-xs font-sans transition-all flex items-center justify-center relative ${
+                    isSelected
+                      ? 'bg-[#41584C] text-[#F5F0E5] font-semibold shadow-sm'
+                      : isWeddingDay
+                      ? 'bg-[#EAE2D3] text-[#343F35] font-semibold border border-[#C3A56B]/60 hover:bg-[#41584C] hover:text-white'
+                      : 'text-[#343F35] hover:bg-[#EAE2D3]/70'
+                  }`}
+                >
+                  {day}
+                  {isWeddingDay && !isSelected && (
+                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[#C3A56B]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Bespoke Wedding Stationery Time Picker
+ * 12-hour format with AM/PM and quick selection
+ */
+function WeddingTimePicker({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const parseTime = (val) => {
+    if (!val) return { hour: '10', minute: '30', period: 'AM' };
+    const parts = val.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (parts) {
+      return { hour: parts[1].padStart(2, '0'), minute: parts[2], period: parts[3].toUpperCase() };
+    }
+    return { hour: '10', minute: '30', period: 'AM' };
+  };
+
+  const { hour, minute, period } = parseTime(value);
+
+  const updateTime = (newH, newM, newP) => {
+    const formatted = `${newH}:${newM} ${newP}`;
+    onChange(formatted);
+  };
+
+  const quickTimes = [
+    { label: 'Morning (09:00 AM)', time: '09:00 AM' },
+    { label: 'Noon (12:00 PM)', time: '12:00 PM' },
+    { label: 'Afternoon (03:30 PM)', time: '03:30 PM' },
+    { label: 'Evening (06:00 PM)', time: '06:00 PM' },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-[#C3A56B]/35 text-xs text-left focus:outline-none focus:border-[#41584C] hover:border-[#41584C]/50 transition-all shadow-sm group"
+      >
+        <div className="flex items-center gap-2.5 truncate">
+          <Clock className="w-4 h-4 text-[#C3A56B] flex-shrink-0" />
+          <span className={value ? 'text-[#343F35] font-medium' : 'text-gray-400'}>
+            {value || 'Select Arrival Time'}
+          </span>
+        </div>
+        <span className="text-[10px] uppercase font-cormorant tracking-widest text-[#657968] group-hover:text-[#41584C]">
+          {isOpen ? 'Close' : 'Choose'}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 z-40 mt-1.5 p-3.5 bg-[#FDFBF7] rounded-2xl border border-[#C3A56B]/40 shadow-xl bg-paper-texture">
+          <div className="text-[11px] font-cormorant uppercase tracking-widest text-[#657968] font-semibold mb-2 text-center">
+            Approximate Arrival Time
+          </div>
+
+          {/* Quick presets */}
+          <div className="grid grid-cols-2 gap-1.5 mb-3">
+            {quickTimes.map(qt => (
+              <button
+                key={qt.time}
+                type="button"
+                onClick={() => { onChange(qt.time); setIsOpen(false); }}
+                className={`text-[10px] font-sans px-2 py-1 rounded-lg border text-left transition-all ${
+                  value === qt.time
+                    ? 'bg-[#41584C] text-[#F5F0E5] border-[#41584C] font-medium'
+                    : 'bg-white text-[#343F35] border-[#C3A56B]/30 hover:border-[#41584C]'
+                }`}
+              >
+                {qt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Time Dial Selectors */}
+          <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-[#EAE2D3]/50 border border-[#C3A56B]/20">
+            {/* Hour Selector */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] uppercase font-sans text-[#657968] mb-1">Hour</span>
+              <select
+                value={hour}
+                onChange={(e) => updateTime(e.target.value, minute, period)}
+                className="px-2 py-1 rounded-lg bg-white border border-[#C3A56B]/40 text-xs font-mono font-medium text-[#343F35] focus:outline-none"
+              >
+                {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-base font-bold text-[#343F35] self-end mb-1">:</span>
+
+            {/* Minute Selector */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] uppercase font-sans text-[#657968] mb-1">Minute</span>
+              <select
+                value={minute}
+                onChange={(e) => updateTime(hour, e.target.value, period)}
+                className="px-2 py-1 rounded-lg bg-white border border-[#C3A56B]/40 text-xs font-mono font-medium text-[#343F35] focus:outline-none"
+              >
+                {['00', '15', '30', '45'].map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* AM / PM Toggle */}
+            <div className="flex flex-col items-center ml-1">
+              <span className="text-[9px] uppercase font-sans text-[#657968] mb-1">Period</span>
+              <div className="flex rounded-lg border border-[#C3A56B]/40 overflow-hidden">
+                {['AM', 'PM'].map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => updateTime(hour, minute, p)}
+                    className={`px-2 py-1 text-xs font-sans font-semibold transition-all ${
+                      period === p
+                        ? 'bg-[#41584C] text-[#F5F0E5]'
+                        : 'bg-white text-[#657968] hover:bg-[#EAE2D3]/60'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                if (!value) updateTime(hour, minute, period);
+                setIsOpen(false);
+              }}
+              className="px-4 py-1 rounded-full bg-[#41584C] text-[#F5F0E5] text-[11px] font-sans font-medium"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RsvpModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
@@ -38,7 +334,8 @@ export default function RsvpModal({ isOpen, onClose }) {
       'Barat, Varmala & Sajan Goth Lunch (15th Feb, 9 AM)'
     ],
     arrival_mode: 'Car',
-    arrival_date: '14th Feb Morning',
+    arrival_date: '14 February 2027',
+    arrival_time: '10:30 AM',
     arrival_info: '',
     needs_accommodation: 'No',
     blessing_message: '',
@@ -98,16 +395,23 @@ export default function RsvpModal({ isOpen, onClose }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
     setSubmissionError('');
 
+    const formattedArrival = formData.arrival_date && formData.arrival_time
+      ? `${formData.arrival_date} at ${formData.arrival_time}`
+      : formData.arrival_date || formData.arrival_time || '14 February 2027';
+
     const submissionPayload = {
       ...formData,
-      arrival_info: formData.arrival_info 
-        ? `${formData.arrival_mode} - ${formData.arrival_date} (${formData.arrival_info})`
-        : `${formData.arrival_mode} - ${formData.arrival_date}`
+      arrival_date: formattedArrival,
+      arrival_info: `${formData.arrival_mode} - ${formattedArrival}`,
+      needs_accommodation: 'No', // Removed from UI, cleanly defaulted for database compatibility
+      dietary_notes: '',
+      event_notes: '',
+      blessing_message: (formData.blessing_message || '').trim()
     };
 
     try {
@@ -117,12 +421,11 @@ export default function RsvpModal({ isOpen, onClose }) {
       }
       setSubmittedData({ ...result.data, backend: result.backend });
       setStep(4);
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#C3A56B', '#F5F0E5', '#41584C', '#657968']
-      });
+      try {
+        triggerFloralShower(null, 45);
+      } catch (e) {
+        console.warn('Floral shower on RSVP confirmation:', e);
+      }
     } catch (err) {
       console.error('RSVP submission error:', err);
       setErrors({ ...(err.fields || {}), submission: err.message || 'Unable to save RSVP. Please try again.' });
@@ -171,7 +474,7 @@ export default function RsvpModal({ isOpen, onClose }) {
             {step === 4 
               ? 'Your presence is our cherished blessing. See you in Chhindwara!' 
               : `Step ${step} of 3: ${
-                  step === 1 ? 'Guest Information' : step === 2 ? 'Attendance & Headcount' : 'Travel & Blessings'
+                  step === 1 ? 'Guest Information' : step === 2 ? 'Attendance & Headcount' : 'Travel Schedule'
                 }`}
           </p>
 
@@ -235,7 +538,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     'Baluapuri Family',
-                    'Verma / Kushwah Family',
+                    'Kushwah Family',
                     'Friends & Colleagues'
                   ].map((sideOption) => (
                     <button
@@ -300,6 +603,17 @@ export default function RsvpModal({ isOpen, onClose }) {
                   </button>
                 </div>
               </div>
+
+              {formData.attending === 'Regretfully Declining' && (
+                <div className="p-4 rounded-2xl bg-[#EAE2D3]/50 border border-[#C3A56B]/30 text-center">
+                  <p className="font-cormorant italic text-sm text-[#343F35]">
+                    We will dearly miss your gracious presence at the celebrations.
+                  </p>
+                  <p className="text-[11px] font-sans text-[#657968] mt-1">
+                    Please confirm your response below so we can record your blessings in our guest ledger.
+                  </p>
+                </div>
+              )}
 
               {formData.attending === 'Joyfully Attending' && (
                 <>
@@ -380,110 +694,128 @@ export default function RsvpModal({ isOpen, onClose }) {
                 >
                   ← Back
                 </button>
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-7 py-2.5 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all"
-                >
-                  Continue →
-                </button>
+
+                {formData.attending === 'Regretfully Declining' ? (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className="px-7 py-2.5 rounded-full bg-gray-800 text-white font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black transition-all flex items-center gap-2"
+                  >
+                    {isSubmitting && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Confirm Response</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="px-7 py-2.5 rounded-full bg-[#41584C] text-[#F5F0E5] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2C3E34] transition-all"
+                  >
+                    Continue to Travel Schedule →
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
 
-          {/* STEP 3: TRAVEL & BLESSING */}
+          {/* STEP 3: TRAVEL SCHEDULE (Streamlined, elegant, no unwanted textboxes) */}
           {step === 3 && (
             <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
               {formData.attending === 'Joyfully Attending' && (
                 <>
+                  {/* Mode of Travel Pills */}
+                  <div>
+                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-2">
+                      Mode of Travel
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'Car', label: 'Personal Car / Road' },
+                        { id: 'Train', label: 'Train (CWA / NGP)' },
+                        { id: 'Flight', label: 'Flight via Nagpur' },
+                        { id: 'Local', label: 'Local Resident' },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, arrival_mode: m.id })}
+                          className={`p-2.5 rounded-xl border text-xs font-sans text-center transition-all ${
+                            formData.arrival_mode === m.id
+                              ? 'border-[#41584C] bg-[#41584C] text-[#F5F0E5] font-medium shadow-sm'
+                              : 'border-[#C3A56B]/30 bg-white text-[#343F35] hover:border-[#41584C]/40'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Date & Time Selectors Side by Side */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1">
-                        Mode of Travel
+                        Expected Arrival Date
                       </label>
-                      <select
-                        value={formData.arrival_mode}
-                        onChange={(e) => setFormData({ ...formData, arrival_mode: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-[#C3A56B]/30 text-[#343F35] text-xs focus:outline-none"
-                      >
-                        <option value="Car">Personal Car / Road</option>
-                        <option value="Train">Train (Chhindwara / Nagpur)</option>
-                        <option value="Flight">Flight via Nagpur (NAG)</option>
-                        <option value="Local">Local Resident</option>
-                      </select>
+                      <WeddingDatePicker
+                        value={formData.arrival_date}
+                        onChange={(d) => setFormData({ ...formData, arrival_date: d })}
+                      />
                     </div>
 
                     <div>
                       <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1">
                         Expected Arrival Time
                       </label>
-                      <input
-                        type="text"
-                        value={formData.arrival_date}
-                        onChange={(e) => setFormData({ ...formData, arrival_date: e.target.value })}
-                        placeholder="e.g. 14th Feb morning"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-[#C3A56B]/30 text-[#343F35] text-xs focus:outline-none"
+                      <WeddingTimePicker
+                        value={formData.arrival_time}
+                        onChange={(t) => setFormData({ ...formData, arrival_time: t })}
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1.5">
-                      Accommodation Required?
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, needs_accommodation: 'Yes' })}
-                        className={`p-2.5 rounded-xl border text-xs font-sans transition-all ${
-                          formData.needs_accommodation === 'Yes'
-                            ? 'border-[#41584C] bg-[#41584C] text-[#F5F0E5] font-medium'
-                            : 'border-[#C3A56B]/30 bg-white text-[#343F35]'
-                        }`}
-                      >
-                        Yes, Please Arrange Room
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, needs_accommodation: 'No' })}
-                        className={`p-2.5 rounded-xl border text-xs font-sans transition-all ${
-                          formData.needs_accommodation === 'No'
-                            ? 'border-[#41584C] bg-[#41584C] text-[#F5F0E5] font-medium'
-                            : 'border-[#C3A56B]/30 bg-white text-[#343F35]'
-                        }`}
-                      >
-                        No, Making Own Arrangements
-                      </button>
+                  {/* A Blessing for the Couple (Dedicated luxury wedding stationery message box) */}
+                  <div className="rounded-2xl bg-[#FDFBF7] border border-[#C3A56B]/35 p-4 sm:p-5 shadow-sm bg-paper-texture">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[#C3A56B]" />
+                        <h4 className="font-cormorant text-base sm:text-lg font-semibold text-[#343F35]">
+                          A Blessing for the Couple
+                        </h4>
+                      </div>
+                      <span className="text-[10px] uppercase font-sans tracking-widest text-[#657968] font-medium">
+                        Optional
+                      </span>
                     </div>
+
+                    <p className="text-xs text-[#657968] font-sans mb-3">
+                      Leave a heartfelt wish or blessing for Tanishq &amp; Shivangee.
+                    </p>
+
+                    <div className="relative">
+                      <textarea
+                        rows={3}
+                        maxLength={500}
+                        value={formData.blessing_message}
+                        onChange={(e) => setFormData({ ...formData, blessing_message: e.target.value })}
+                        placeholder="Write your blessings and wishes here..."
+                        className="w-full p-3 sm:p-3.5 rounded-xl bg-white/80 border border-[#C3A56B]/30 text-xs font-sans text-[#343F35] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#41584C] focus:border-[#41584C] resize-none transition-all leading-relaxed"
+                      />
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-[#657968]">
+                        <span className="font-cormorant italic">Your words will be cherished forever</span>
+                        <span className="font-mono">{(formData.blessing_message || '').length}/500</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hospitable reassurance note */}
+                  <div className="p-3.5 rounded-2xl bg-[#EAE2D3]/40 border border-[#C3A56B]/30 text-center">
+                    <p className="font-cormorant italic text-xs sm:text-sm text-[#343F35]">
+                      Our family reception team will be ready to welcome you at The Waterstone Resort, Chhindwara.
+                    </p>
                   </div>
                 </>
               )}
-
-              <div>
-                <label className="block font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold mb-1">
-                  Aashish Vachan • Personal Blessing Note
-                </label>
-                {['dietary_notes', 'event_notes'].map((field) => (
-                  <label key={field} className="block mb-3 font-cormorant uppercase text-xs tracking-[0.2em] text-[#343F35] font-semibold">
-                    {field === 'dietary_notes' ? 'Dietary Requirements' : 'Event Notes'}
-                    <textarea
-                      rows="2"
-                      maxLength={1000}
-                      value={formData[field]}
-                      onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                      className="mt-1 block w-full rounded-xl bg-white border border-[#C3A56B]/30 p-3 font-sans normal-case tracking-normal text-xs font-normal text-[#343F35] focus:outline-none focus:border-[#41584C]"
-                    />
-                  </label>
-                ))}
-
-                <textarea
-                  rows="3"
-                  value={formData.blessing_message}
-                  onChange={(e) => setFormData({ ...formData, blessing_message: e.target.value })}
-                  placeholder="Share your warm blessings and wishes for Tanishq &amp; Shivangee..."
-                  className="w-full p-3 rounded-2xl bg-white border border-[#C3A56B]/30 text-[#343F35] placeholder:text-gray-400 text-xs focus:outline-none focus:border-[#41584C]"
-                />
-              </div>
 
               <div className="pt-4 flex items-center justify-between">
                 <button
@@ -498,7 +830,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   <div
                     role="alert"
                     aria-live="assertive"
-                    className="mt-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-left text-xs text-red-800"
+                    className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-left text-xs text-red-800"
                   >
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{submissionError}</span>
@@ -568,9 +900,9 @@ export default function RsvpModal({ isOpen, onClose }) {
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#657968] uppercase block">Venue</span>
-                    <strong className="text-[#343F35] text-xs block">
-                      The Waterstone
+                    <span className="text-[10px] text-[#657968] uppercase block">Arrival</span>
+                    <strong className="text-[#343F35] text-xs block truncate">
+                      {formData.arrival_date ? `${formData.arrival_date}` : 'The Waterstone'}
                     </strong>
                   </div>
                 </div>
@@ -588,6 +920,17 @@ export default function RsvpModal({ isOpen, onClose }) {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {submittedData.blessing_message && (
+                  <div className="py-3.5 border-b border-[#C3A56B]/20 text-xs font-sans bg-[#FDFBF7] -mx-6 sm:-mx-8 px-6 sm:px-8">
+                    <span className="text-[10px] text-[#657968] uppercase block font-semibold mb-1">
+                      Your Heartfelt Blessing:
+                    </span>
+                    <p className="font-cormorant italic text-sm text-[#343F35] leading-relaxed">
+                      "{submittedData.blessing_message}"
+                    </p>
                   </div>
                 )}
 

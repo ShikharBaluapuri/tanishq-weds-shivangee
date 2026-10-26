@@ -5,18 +5,19 @@ import { BotanicalDivider } from './BespokeIcons';
 
 export default function RollOfHonor({ onOpenAdminModal }) {
   const BEST_COMPLIMENTS = [
-    { title: 'Mrs. Rajshree & Mr. Shailesh Baluapuri', relation: 'Family Elder & Blessings' },
-    { title: 'Mrs. Kavita & Mr. Sapan Shrivastava', relation: 'Family Elder & Blessings' },
     { title: 'Dr. Nidhi & Mr. Manish Baluapuri', relation: 'Proud Parents of the Groom' },
+    { title: 'Mrs. Kavita & Mr. Sapan Shrivastava', relation: 'Family Elder & Blessings' },
     { title: 'Dr. Vidhi & Mr. Vivek Saxena', relation: 'Family Elder & Blessings' },
     { title: 'Mrs. Purvi & Mr. Vishwa Anurag Saxena', relation: 'Family Elder & Blessings' },
     { title: 'Mr. Shikhar Baluapuri', relation: 'Family & Best Man' },
+    { title: 'Ishaan Saxena', relation: 'Best Man' },
+    { title: 'Tanay Shrivastava', relation: 'Best Man' },
   ];
 
   const CONTACTS = [
-    { name: 'Dr. Nidhi & Mr. Manish Baluapuri', number: '9425006278', role: 'Main Host Contact' },
-    { name: 'Hospitality & Room Desk', number: '8454046248', role: 'Guest Care & Rooms' },
-    { name: 'Logistics & Arrival Desk', number: '8623876930', role: 'Arrival Queries' },
+    { name: 'Manish Baluapuri', number: '9425006278', role: 'Main Host Contact' },
+    { name: 'Shikhar Baluapuri', number: '8623876930', role: 'Logistics & Guest Care' },
+    { name: 'Tanishq Baluapuri', number: '9167166675', role: 'Groom & Host' },
   ];
 
   return (
@@ -44,7 +45,7 @@ export default function RollOfHonor({ onOpenAdminModal }) {
             </span>
             <span className="font-pinyon text-3xl text-[#C3A56B]">&amp;</span>
             <span className="font-cormorant font-medium text-2xl sm:text-3xl text-[#343F35]">
-              Verma Family
+              Kushwah Family
             </span>
           </div>
 

@@ -201,7 +201,7 @@ VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
 ## 4. Family Host Admin Dashboard
 
 - **Access:** Click the small lock icon (`Family Host Login`) in the website footer.
-- **Security PIN:** `1502` (derived from the wedding date: 15th February).
+- **Security PIN:** 4-digit family security PIN (verified server-side via `/api/verify-pin`).
 - **Features:**
   - Real-time catering counts per event (Ganesh Poojan, Haldi, Sangeet, Wedding).
   - Searchable and filterable guest table.

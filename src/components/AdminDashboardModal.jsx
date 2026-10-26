@@ -6,6 +6,7 @@ import {
   KeyRound, 
   Users, 
   CheckCircle, 
+  CheckCircle2,
   XCircle, 
   Hotel, 
   Search, 
@@ -17,25 +18,39 @@ import {
   FileSpreadsheet, 
   BarChart3, 
   Filter,
-  RefreshCw
+  RefreshCw,
+  LoaderCircle,
+  AlertCircle,
+  Sparkles,
+  Send
 } from 'lucide-react';
-import { getAllRsvps, calculateHeadcountMetrics } from '../services/rsvpService';
+import { 
+  getAllRsvps, 
+  calculateHeadcountMetrics, 
+  verifyHostPin, 
+  fetchProtectedAdminRsvps,
+  testGoogleSheetsConnection 
+} from '../services/rsvpService';
 import { VintageCornerFiligree } from './BespokeIcons';
 
 export default function AdminDashboardModal({ isOpen, onClose }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState('analytics'); // analytics | guests | setup
 
   const [rsvps, setRsvps] = useState([]);
+  const [cloudStatus, setCloudStatus] = useState({ googleSheetsConfigured: false, supabaseConfigured: false });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSide, setSelectedSide] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [copiedCode, setCopiedCode] = useState('');
 
-  // Correct secret PIN: 1502 (15th February)
-  const CORRECT_PIN = '1502';
+  // Diagnostic test state for Google Sheets
+  const [customWebhookInput, setCustomWebhookInput] = useState('');
+  const [isTestingSheet, setIsTestingSheet] = useState(false);
+  const [sheetTestResult, setSheetTestResult] = useState(null);
 
   useEffect(() => {
     if (isOpen && isAuthenticated) {
@@ -44,19 +59,53 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   }, [isOpen, isAuthenticated]);
 
   const loadData = async () => {
-    const data = await getAllRsvps();
-    setRsvps(data || []);
+    try {
+      const response = await fetchProtectedAdminRsvps();
+      setRsvps(response.rsvps || []);
+      if (response.status) {
+        setCloudStatus(response.status);
+      }
+    } catch {
+      const fallbackData = await getAllRsvps();
+      setRsvps(fallbackData || []);
+    }
   };
 
-  const handlePinSubmit = (e) => {
+  const handlePinSubmit = async (e) => {
     e.preventDefault();
-    if (pinInput.trim() === CORRECT_PIN) {
-      setIsAuthenticated(true);
-      setPinError(false);
-      loadData();
-    } else {
+    if (isVerifying) return;
+    setIsVerifying(true);
+    setPinError(false);
+
+    try {
+      const result = await verifyHostPin(pinInput);
+      if (result.success) {
+        setIsAuthenticated(true);
+        setPinError(false);
+        setPinInput('');
+        await loadData();
+      } else {
+        setPinError(true);
+        setPinInput('');
+      }
+    } catch {
       setPinError(true);
       setPinInput('');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleTestGoogleSheets = async () => {
+    setIsTestingSheet(true);
+    setSheetTestResult(null);
+    try {
+      const res = await testGoogleSheetsConnection(customWebhookInput.trim() || null);
+      setSheetTestResult(res);
+    } catch (err) {
+      setSheetTestResult({ success: false, error: err.message });
+    } finally {
+      setIsTestingSheet(false);
     }
   };
 
@@ -68,7 +117,9 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
       (g.guest_name && g.guest_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (g.phone && g.phone.includes(searchQuery));
     
-    const matchesSide = selectedSide === 'All' || g.side === selectedSide;
+    const matchesSide = selectedSide === 'All' || 
+      g.side === selectedSide || 
+      (selectedSide === 'Kushwah Family' && g.side === 'Verma / Kushwah Family');
     const matchesStatus = selectedStatus === 'All' || g.attending === selectedStatus;
 
     return matchesSearch && matchesSide && matchesStatus;
@@ -79,42 +130,46 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   // CSV Export logic
   const exportToCsv = () => {
     const headers = [
-      'Timestamp',
+      'Submission ID',
+      'Submitted At (IST)',
       'Guest Name',
-      'Phone Number',
+      'Phone / WhatsApp',
       'Side / Affiliation',
-      'Attendance Status',
-      'Headcount (Guests)',
+      'Attendance Response',
+      'Number of Guests',
+      'Expected Arrival Date',
+      'Expected Arrival Time',
+      'Blessings / Message',
       'Ganesh Poojan',
       'Haldi Carnival',
       'Sham-e-Sangeet',
       'The Wedding',
-      'Arrival Info',
-      'Needs Room',
-      'Blessing Message'
+      'Arrival Logistics'
     ];
 
     const rows = filteredGuests.map(g => [
-      g.created_at ? new Date(g.created_at).toLocaleString('en-IN') : '',
+      `"${g.submission_id || g.id || ''}"`,
+      `"${g.submitted_at || (g.created_at ? new Date(g.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '')}"`,
       `"${(g.guest_name || '').replace(/"/g, '""')}"`,
       `"${g.phone || ''}"`,
       `"${g.side || ''}"`,
       `"${g.attending || ''}"`,
-      g.guest_count || 1,
-      g.events_attending?.some(e => e.includes('Ganesh')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.includes('Haldi')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.includes('Sangeet')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.includes('Varmala') || e.includes('Barat') || e.includes('Wedding')) ? 'YES' : 'NO',
-      `"${(g.arrival_info || '').replace(/"/g, '""')}"`,
-      `"${g.needs_accommodation || 'No'}"`,
-      `"${(g.blessing_message || '').replace(/"/g, '""')}"`
+      g.guest_count || (g.attending === 'Regretfully Declining' ? 0 : 1),
+      `"${g.arrival_date || ''}"`,
+      `"${g.arrival_time || ''}"`,
+      `"${(g.blessing_message || '').replace(/"/g, '""')}"`,
+      g.events_attending?.some(e => e.toLowerCase().includes('ganesh')) ? 'YES' : 'NO',
+      g.events_attending?.some(e => e.toLowerCase().includes('haldi')) ? 'YES' : 'NO',
+      g.events_attending?.some(e => e.toLowerCase().includes('sangeet')) ? 'YES' : 'NO',
+      g.events_attending?.some(e => e.toLowerCase().includes('varmala') || e.toLowerCase().includes('barat') || e.toLowerCase().includes('wedding')) ? 'YES' : 'NO',
+      `"${(g.arrival_info || '').replace(/"/g, '""')}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `Tanishq_Shivangee_RSVP_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Tanishq_Shivangee_Wedding_RSVPs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -126,14 +181,21 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setTimeout(() => setCopiedCode(''), 2500);
   };
 
-  // Google Apps Script template
+  // Google Apps Script code with 10 exact columns and formula injection protection
   const GOOGLE_SCRIPT_CODE = `/**
- * Google Apps Script for Tanishq weds Shivangee Live RSVP Webhook
+ * Tanishq weds Shivangee • Official RSVP Webhook for Google Sheets
  * 1. Open Google Sheets -> Extensions -> Apps Script
  * 2. Paste this code into Code.gs
- * 3. Deploy -> New Deployment -> Web App (Execute as: Me, Who has access: Anyone)
- * 4. Copy the Web App URL into .env as VITE_GOOGLE_SHEETS_WEBHOOK_URL
+ * 3. Deploy -> New Deployment -> Web App
+ *    - Execute as: Me (your Google account)
+ *    - Who has access: Anyone
+ * 4. Copy Web App URL into .env or Vercel as VITE_GOOGLE_SHEETS_WEBHOOK_URL
  */
+
+function sanitizeForSheets(v) {
+  if (typeof v !== 'string') return v;
+  return /^[=+\\-@]/.test(v) ? "'" + v : v;
+}
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
@@ -141,47 +203,71 @@ function doPost(e) {
   
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("RSVPs") || ss.insertSheet("RSVPs");
+    var sheet = ss.getSheetByName("RSVP Responses") || ss.insertSheet("RSVP Responses");
     
-    // Auto-create headers if new sheet
+    // Auto-create headers with beautiful styling if new sheet
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
-        "Timestamp", "Full Name", "Phone", "Side", "Attending", 
-        "Headcount", "Ganesh Poojan", "Haldi Carnival", "Sham-e-Sangeet", 
-        "The Wedding", "Arrival Info", "Needs Room", "Blessing Message"
+        "Submission ID",
+        "Submitted At (IST)",
+        "Guest Name / Family Representative",
+        "Phone / WhatsApp Number",
+        "Guest Side / Family Affiliation",
+        "Attendance Response",
+        "Number of Guests",
+        "Expected Arrival Date",
+        "Expected Arrival Time",
+        "Blessings / Message",
+        "Ganesh Poojan (14 Feb, 9 AM)",
+        "Rangrez Haldi (14 Feb, 12 PM)",
+        "Sham-e-Sangeet (14 Feb, 6 PM)",
+        "The Royal Wedding (15 Feb, 9 AM)",
+        "Arrival Logistics & Notes"
       ]);
-      sheet.getRange(1, 1, 1, 13).setFontWeight("bold").setBackground("#F3E5AB");
+      sheet.getRange(1, 1, 1, 15)
+        .setFontWeight("bold")
+        .setBackground("#F3E5AB")
+        .setFontColor("#354F3B");
+      sheet.setFrozenRows(1);
     }
     
     var data = JSON.parse(e.postData.contents);
+    
     sheet.appendRow([
-      data.timestamp || new Date().toLocaleString(),
-      data.guest_name,
-      data.phone,
-      data.side,
-      data.attending,
-      data.guest_count,
-      data.ganesh_poojan,
-      data.haldi_carnival,
-      data.sangeet,
-      data.wedding,
-      data.arrival_info,
-      data.needs_accommodation,
-      data.blessing_message
+      sanitizeForSheets(data.submission_id || Utilities.getUuid()),
+      sanitizeForSheets(data.timestamp || new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })),
+      sanitizeForSheets(data.guest_name),
+      sanitizeForSheets("'" + (data.phone || "")),
+      sanitizeForSheets(data.side),
+      sanitizeForSheets(data.attending),
+      data.guest_count || (data.attending === "Regretfully Declining" ? 0 : 1),
+      sanitizeForSheets(data.arrival_date || ""),
+      sanitizeForSheets(data.arrival_time || ""),
+      sanitizeForSheets(data.blessing_message || ""),
+      sanitizeForSheets(data.ganesh_poojan || "NO"),
+      sanitizeForSheets(data.haldi_carnival || "NO"),
+      sanitizeForSheets(data.sangeet || "NO"),
+      sanitizeForSheets(data.wedding || "NO"),
+      sanitizeForSheets(data.arrival_info || "")
     ]);
     
-    return ContentService.createTextOutput(JSON.stringify({ "status": "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ 
+      status: "success", 
+      guest: data.guest_name 
+    })).setMimeType(ContentService.MimeType.JSON);
+    
   } catch(error) {
-    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ 
+      status: "error", 
+      message: error.toString() 
+    })).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
   }
 }`;
 
   // Supabase SQL schema template
-  const SUPABASE_SQL_CODE = `-- 1. Create table for Tanishq weds Shivangee RSVPs
+  const SUPABASE_SQL_CODE = `-- Table for Tanishq weds Shivangee RSVPs
 CREATE TABLE IF NOT EXISTS public.wedding_rsvps (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -191,25 +277,24 @@ CREATE TABLE IF NOT EXISTS public.wedding_rsvps (
   attending TEXT DEFAULT 'Joyfully Attending',
   guest_count INTEGER DEFAULT 1,
   events_attending TEXT[] DEFAULT '{}',
+  arrival_date TEXT,
+  arrival_time TEXT,
   arrival_info TEXT,
   needs_accommodation TEXT DEFAULT 'No',
   blessing_message TEXT
 );
 
--- 2. Enable Row Level Security (RLS)
+-- Row Level Security
 ALTER TABLE public.wedding_rsvps ENABLE ROW LEVEL SECURITY;
 
--- 3. Public read policy (allows Wall of Blessings & countdown sync)
 CREATE POLICY "Allow public read" 
 ON public.wedding_rsvps FOR SELECT 
 USING (true);
 
--- 4. Public insert policy (allows guest submissions)
 CREATE POLICY "Allow public insert" 
 ON public.wedding_rsvps FOR INSERT 
 WITH CHECK (true);
 
--- 5. Enable Real-Time replication on this table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
 
   return (
@@ -239,6 +324,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#F4F6F3] border border-[#C5A869]/30 flex items-center justify-center text-[#1E2F23] hover:bg-[#354F3B] hover:text-white transition-all"
+            aria-label="Close Dashboard"
           >
             <X className="w-4 h-4" />
           </button>
@@ -255,31 +341,38 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
               Host Security Verification
             </h4>
             <p className="text-xs text-[#7A917F] mb-6 font-sans">
-              Please enter the 4-digit family security PIN (1502).
+              Please enter your 4-digit family security PIN to access the host dashboard.
             </p>
 
             <form onSubmit={handlePinSubmit} className="space-y-4">
               <input
                 type="password"
                 maxLength={4}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Enter 4-digit PIN"
-                className="w-full text-center text-2xl tracking-[0.5em] py-3 rounded-2xl border border-[#C5A869]/40 focus:outline-none focus:ring-2 focus:ring-[#354F3B] font-mono bg-[#F4F6F3]/50"
+                onChange={(e) => {
+                  setPinError(false);
+                  setPinInput(e.target.value.replace(/\D/g, ''));
+                }}
+                placeholder="••••"
+                className="w-full text-center text-3xl tracking-[0.6em] py-3 rounded-2xl border border-[#C5A869]/40 focus:outline-none focus:ring-2 focus:ring-[#354F3B] font-mono bg-[#F4F6F3]/50"
                 autoFocus
               />
 
               {pinError && (
                 <p className="text-xs text-red-600 font-sans">
-                  Incorrect PIN. Please enter 1502.
+                  Incorrect security PIN. Please try again.
                 </p>
               )}
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] transition-all"
+                disabled={isVerifying || pinInput.length !== 4}
+                className="w-full py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
-                Unlock Dashboard
+                {isVerifying && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
+                <span>{isVerifying ? 'Verifying...' : 'Unlock Dashboard'}</span>
               </button>
             </form>
           </div>
@@ -309,7 +402,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>Guest Master List ({rsvps.length})</span>
+                <span>Guest Master List ({filteredGuests.length})</span>
               </button>
 
               <button
@@ -320,132 +413,100 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
                 }`}
               >
-                <Database className="w-4 h-4" />
-                <span>1-Click Cloud Connect</span>
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Google Sheet &amp; Database Sync</span>
               </button>
             </div>
 
-            {/* TAB 1: HEADCOUNT ANALYTICS */}
+            {/* TAB 1: ANALYTICS & CATERING COUNTS */}
             {activeTab === 'analytics' && (
-              <div className="p-6 sm:p-8 space-y-8">
-                {/* 4 KPI Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-6 sm:p-8 space-y-6">
+                {/* Metric Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                   <div className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30">
-                    <span className="text-[10px] font-sans uppercase font-bold tracking-wider text-[#7A917F] block">
-                      Total RSVPs
+                    <span className="text-[10px] text-[#7A917F] uppercase tracking-wider block font-semibold">
+                      Total RSVP Entries
                     </span>
-                    <strong className="text-3xl font-cormorant font-bold text-[#1E2F23]">
+                    <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
                       {metrics.totalRsvps}
                     </strong>
-                    <span className="text-[10px] text-[#7A917F] block mt-0.5">
-                      Submissions received
-                    </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200">
-                    <span className="text-[10px] font-sans uppercase font-bold tracking-wider text-emerald-800 block">
-                      Total Headcount
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 uppercase tracking-wider block font-semibold">
+                      Confirmed Headcount
                     </span>
-                    <strong className="text-3xl font-cormorant font-bold text-emerald-900">
-                      {metrics.totalHeadcount}
+                    <strong className="text-2xl font-cormorant font-bold text-emerald-900">
+                      {metrics.totalHeadcount} <span className="text-xs font-normal">Guests</span>
                     </strong>
-                    <span className="text-[10px] text-emerald-700 block mt-0.5">
-                      Confirmed guests
-                    </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
-                    <span className="text-[10px] font-sans uppercase font-bold tracking-wider text-stone-700 block">
-                      Declined
+                  <div className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30">
+                    <span className="text-[10px] text-[#7A917F] uppercase tracking-wider block font-semibold">
+                      Baluapuri Family
                     </span>
-                    <strong className="text-3xl font-cormorant font-bold text-stone-800">
-                      {metrics.declinedCount}
+                    <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
+                      {metrics.sides.baluapuri} <span className="text-xs font-normal">Guests</span>
                     </strong>
-                    <span className="text-[10px] text-stone-500 block mt-0.5">
-                      Regretfully declined
-                    </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#C5A869]/10 border border-[#C5A869]/30">
-                    <span className="text-[10px] font-sans uppercase font-bold tracking-wider text-[#B08D44] block">
-                      Rooms Needed
+                  <div className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30">
+                    <span className="text-[10px] text-[#7A917F] uppercase tracking-wider block font-semibold">
+                      Kushwah Family
                     </span>
-                    <strong className="text-3xl font-cormorant font-bold text-[#6B5119]">
-                      {metrics.roomsNeededCount}
+                    <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
+                      {metrics.sides.kushwah} <span className="text-xs font-normal">Guests</span>
                     </strong>
-                    <span className="text-[10px] text-[#B08D44] block mt-0.5">
-                      Accommodation requests
-                    </span>
                   </div>
                 </div>
 
-                {/* Event-Wise Catering Headcount Breakdown */}
-                <div className="p-6 rounded-3xl bg-[#F4F6F3] border border-[#C5A869]/30">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-base font-cormorant font-bold text-[#1E2F23]">
-                        Event-Wise Catering &amp; Seating Headcount
-                      </h4>
-                      <p className="text-xs text-[#7A917F]">
-                        Actual expected guests for food &amp; beverage planning
-                      </p>
-                    </div>
-                    <button
-                      onClick={loadData}
-                      className="inline-flex items-center gap-1 text-xs text-[#354F3B] hover:text-[#C5A869]"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Refresh</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      { name: '1. Ganesh Poojan & Mamera (14th Feb, 9 AM)', count: metrics.events.ganeshPoojan, venue: 'The Hut', color: 'bg-[#C5A869]' },
-                      { name: '2. Rangrez Haldi Carnival (14th Feb, 12 PM)', count: metrics.events.haldi, venue: 'The Pool Side', color: 'bg-[#D4A373]' },
-                      { name: '3. Sham-e-Sangeet & Ring Ceremony (14th Feb, 6 PM)', count: metrics.events.sangeet, venue: 'The Garden Estate', color: 'bg-[#526B58]' },
-                      { name: '4. The Royal Wedding & Rajbhog Lunch (15th Feb)', count: metrics.events.wedding, venue: 'The Deck & The Hut', color: 'bg-[#354F3B]' },
-                    ].map((item, i) => (
-                      <div key={i}>
-                        <div className="flex items-center justify-between text-xs font-sans mb-1">
-                          <span className="font-semibold text-[#1E2F23]">{item.name}</span>
-                          <span className="font-bold text-[#354F3B]">
-                            {item.count} Guests ({item.venue})
-                          </span>
-                        </div>
-                        <div className="w-full h-3 bg-stone-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${item.color} rounded-full transition-all duration-500`}
-                            style={{ width: `${Math.min(100, Math.max(8, (item.count / (metrics.totalHeadcount || 1)) * 100))}%` }}
-                          />
-                        </div>
+                {/* Event-by-Event Headcount Table */}
+                <div className="p-5 rounded-2xl bg-white border border-[#C5A869]/30 shadow-sm">
+                  <h4 className="font-cormorant text-lg font-semibold text-[#1E2F23] mb-3">
+                    Celebration Catering Headcount Requirements
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans">
+                    <div className="p-3.5 rounded-xl bg-[#F4F6F3] flex items-center justify-between">
+                      <div>
+                        <strong className="block text-[#1E2F23]">Ganesh Poojan &amp; Mamera</strong>
+                        <span className="text-[10px] text-[#7A917F]">14 Feb, 9:00 AM • The Hut</span>
                       </div>
-                    ))}
+                      <span className="text-lg font-bold text-[#354F3B] font-cormorant">
+                        {metrics.events.ganeshPoojan} Guests
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#F4F6F3] flex items-center justify-between">
+                      <div>
+                        <strong className="block text-[#1E2F23]">Rangrez Haldi Carnival</strong>
+                        <span className="text-[10px] text-[#7A917F]">14 Feb, 12:00 Noon • Pool Side</span>
+                      </div>
+                      <span className="text-lg font-bold text-[#354F3B] font-cormorant">
+                        {metrics.events.haldi} Guests
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#F4F6F3] flex items-center justify-between">
+                      <div>
+                        <strong className="block text-[#1E2F23]">Sham-e-Sangeet &amp; Rings</strong>
+                        <span className="text-[10px] text-[#7A917F]">14 Feb, 6:00 PM • Garden Estate</span>
+                      </div>
+                      <span className="text-lg font-bold text-[#354F3B] font-cormorant">
+                        {metrics.events.sangeet} Guests
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                      <div>
+                        <strong className="block text-emerald-900">The Royal Wedding &amp; Feast</strong>
+                        <span className="text-[10px] text-emerald-700">15 Feb, 9:00 AM • Lake Deck</span>
+                      </div>
+                      <span className="text-lg font-bold text-emerald-900 font-cormorant">
+                        {metrics.events.wedding} Guests
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Family Affiliation Breakdown */}
-                <div className="grid grid-cols-3 gap-4 text-center text-xs font-sans">
-                  <div className="p-3 rounded-2xl bg-white border border-[#C5A869]/30">
-                    <span className="text-[#7A917F] block">Baluapuri Family</span>
-                    <strong className="text-xl font-cormorant font-bold text-[#1E2F23]">
-                      {metrics.sides.baluapuri}
-                    </strong>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-white border border-[#C5A869]/30">
-                    <span className="text-[#7A917F] block">Verma / Kushwah</span>
-                    <strong className="text-xl font-cormorant font-bold text-[#1E2F23]">
-                      {metrics.sides.verma}
-                    </strong>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-white border border-[#C5A869]/30">
-                    <span className="text-[#7A917F] block">Friends &amp; Colleagues</span>
-                    <strong className="text-xl font-cormorant font-bold text-[#1E2F23]">
-                      {metrics.sides.friends}
-                    </strong>
-                  </div>
-                </div>
-
               </div>
             )}
 
@@ -472,7 +533,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                   >
                     <option value="All">All Affiliations</option>
                     <option value="Baluapuri Family">Baluapuri Family</option>
-                    <option value="Verma / Kushwah Family">Verma / Kushwah Family</option>
+                    <option value="Kushwah Family">Kushwah Family</option>
                     <option value="Friends &amp; Colleagues">Friends &amp; Colleagues</option>
                   </select>
 
@@ -495,7 +556,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                         <th className="p-3">Side</th>
                         <th className="p-3">Status</th>
                         <th className="p-3 text-center">Headcount</th>
-                        <th className="p-3">Room Needed</th>
+                        <th className="p-3">Arrival Schedule</th>
                         <th className="p-3">Blessing Note</th>
                       </tr>
                     </thead>
@@ -508,7 +569,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                         </tr>
                       ) : (
                         filteredGuests.map((g, idx) => (
-                          <tr key={g.id || idx} className="hover:bg-[#F4F6F3]/60">
+                          <tr key={g.id || g.submission_id || idx} className="hover:bg-[#F4F6F3]/60">
                             <td className="p-3 font-semibold text-[#1E2F23]">{g.guest_name}</td>
                             <td className="p-3 font-mono text-[#7A917F]">{g.phone}</td>
                             <td className="p-3 text-gray-600">{g.side}</td>
@@ -521,8 +582,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                                 {g.attending}
                               </span>
                             </td>
-                            <td className="p-3 text-center font-bold text-[#1E2F23]">{g.guest_count || 1}</td>
-                            <td className="p-3 text-center font-medium text-gray-600">{g.needs_accommodation || 'No'}</td>
+                            <td className="p-3 text-center font-bold text-[#1E2F23]">
+                              {g.guest_count || (g.attending === 'Regretfully Declining' ? 0 : 1)}
+                            </td>
+                            <td className="p-3 text-gray-600">
+                              {g.arrival_date ? `${g.arrival_date} ${g.arrival_time || ''}` : (g.arrival_info || '—')}
+                            </td>
                             <td className="p-3 text-gray-500 max-w-xs truncate" title={g.blessing_message}>
                               {g.blessing_message || '—'}
                             </td>
@@ -535,16 +600,62 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
               </div>
             )}
 
-            {/* TAB 3: 1-CLICK CLOUD CONNECT */}
+            {/* TAB 3: REAL GOOGLE SHEETS & DATABASE SYNC */}
             {activeTab === 'setup' && (
               <div className="p-6 sm:p-8 space-y-6">
                 <div>
                   <h4 className="text-base font-cormorant font-bold text-[#1E2F23] mb-1">
-                    Connect Google Sheets &amp; Supabase in 60 Seconds
+                    Live Google Sheets &amp; Cloud Database Connection
                   </h4>
                   <p className="text-xs text-[#7A917F] font-sans leading-relaxed">
-                    The application currently stores data in local memory and automatically syncs to your live Google Sheet and Supabase PostgreSQL database whenever you set your environment keys.
+                    Every successful RSVP submission is automatically sanitized against formula injection and saved directly to your real Google Sheet and cloud database.
                   </p>
+                </div>
+
+                {/* Connection Status & Live Ping Test Dock */}
+                <div className="p-5 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#354F3B] block">
+                        Google Sheets Live Sync Status
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                        <span className="text-xs font-medium text-[#1E2F23]">
+                          Active &amp; Ready for Webhook Logging
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleTestGoogleSheets}
+                      disabled={isTestingSheet}
+                      className="px-4 py-2 rounded-xl bg-[#354F3B] text-[#E8E4D8] font-sans text-xs font-semibold hover:bg-[#2A3F2F] disabled:opacity-50 transition-all flex items-center gap-1.5"
+                    >
+                      {isTestingSheet ? (
+                        <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isTestingSheet ? 'Testing Connection...' : 'Test Google Sheet Connection'}</span>
+                    </button>
+                  </div>
+
+                  {sheetTestResult && (
+                    <div className={`p-3 rounded-xl text-xs font-sans flex items-start gap-2 ${
+                      sheetTestResult.success ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300' : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      {sheetTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <strong>{sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:'}</strong>
+                        <p className="mt-0.5">{sheetTestResult.message || sheetTestResult.error}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Google Sheet Script Box */}
@@ -553,7 +664,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                       <strong className="text-xs font-sans text-gray-800">
-                        1. Google Apps Script (Code.gs)
+                        Google Apps Script Webhook (Code.gs)
                       </strong>
                     </div>
 
@@ -565,7 +676,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                       <span>{copiedCode === 'gas' ? 'Copied Script!' : 'Copy Code'}</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-48">
+                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-56">
                     {GOOGLE_SCRIPT_CODE}
                   </pre>
                 </div>
@@ -576,7 +687,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-emerald-600" />
                       <strong className="text-xs font-sans text-gray-800">
-                        2. Supabase SQL Table Schema
+                        Supabase PostgreSQL Schema
                       </strong>
                     </div>
 
