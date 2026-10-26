@@ -160,12 +160,11 @@ export async function fetchProtectedAdminRsvps() {
 
     if (res.ok) {
       const result = await res.json();
-      if (result.rsvps && result.rsvps.length > 0) {
-        return {
-          rsvps: result.rsvps,
-          status: result.status
-        };
-      }
+      return {
+        rsvps: result.rsvps || [],
+        telemetry: result.telemetry || null,
+        status: result.status || null
+      };
     }
   } catch (e) {
     console.warn('Server admin endpoint not available, falling back to local store:', e);
@@ -175,12 +174,39 @@ export async function fetchProtectedAdminRsvps() {
   const localList = await getAllRsvps();
   return {
     rsvps: localList,
+    telemetry: null,
     status: {
       googleSheetsConfigured: Boolean(googleSheetsWebhookUrl),
-      supabaseConfigured: Boolean(supabase)
+      supabaseConfigured: Boolean(supabase),
+      spreadsheetName: 'Tanishq & Shivangee — Wedding RSVP 2027',
+      driveFolderName: 'Tanishq & Shivangee — Wedding RSVP'
     }
   };
 }
+
+/**
+ * Trigger authorized manual retry for Google Sheets sync or WhatsApp notification
+ */
+export async function retryRsvpSync({ rsvp_id = null, action = 'all' } = {}) {
+  const token = sessionStorage.getItem('host_session_token') || '';
+
+  try {
+    const res = await fetch('/api/retry-sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ rsvp_id, action })
+    });
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 
 /**
  * Test live Google Sheets Webhook connection
@@ -246,29 +272,49 @@ export async function getAllRsvps() {
 
 /**
  * Submit an RSVP
- * 1. Sends to server API /api/rsvp (which forwards to Google Sheets & Supabase with formula sanitization)
- * 2. If client has direct webhook, sends as secondary backup
+ * 1. Sends to server API /api/rsvp (which forwards to Google Sheets & Supabase with formula sanitization & WhatsApp routing)
+ * 2. If client has direct webhook, sends as secondary backup conforming to the 14 columns
  * 3. Persists in localStorage and broadcasts event
  */
 export async function submitRsvp(formData) {
   const validated = validateRsvp(formData);
   const timestampIST = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
+  // Generate fallback RSVP ID if needed
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let randomSuffix = '';
+  for (let i = 0; i < 6; i++) {
+    randomSuffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const clientRsvpId = validated.rsvp_id || `RSVP-2027-${randomSuffix}`;
+
   const newRecord = {
     ...validated,
     id: crypto.randomUUID(),
     submission_id: crypto.randomUUID(),
+    rsvp_id: clientRsvpId,
     created_at: new Date().toISOString(),
     submitted_at: timestampIST,
+    last_updated: timestampIST,
     guest_name: sanitizeForSpreadsheet(validated.guest_name),
     phone: sanitizeForSpreadsheet(validated.phone),
     side: sanitizeForSpreadsheet(validated.side),
-    blessing_message: sanitizeForSpreadsheet(validated.blessing_message || '')
+    arrival_date: sanitizeForSpreadsheet(validated.arrival_date),
+    arrival_time: sanitizeForSpreadsheet(validated.arrival_time),
+    blessing_message: sanitizeForSpreadsheet(validated.blessing_message || ''),
+    community_consent: validated.community_consent,
+    community_invite_status: validated.attending === 'Regretfully Declining' 
+      ? (validated.community_consent ? 'invitation_available' : 'declined')
+      : (validated.community_consent ? 'invitation_available' : 'not_consented'),
+    sheets_sync_status: 'pending',
+    whatsapp_notify_status: 'pending_manual_dispatch'
   };
 
   let serverSynced = false;
   let googleSheetsSynced = false;
   let supabaseSynced = false;
+  let whatsappNotificationSent = false;
+  let serverRecord = null;
 
   // 1. Submit through serverless backend API
   try {
@@ -283,33 +329,36 @@ export async function submitRsvp(formData) {
       serverSynced = true;
       googleSheetsSynced = Boolean(apiData.sync?.googleSheets);
       supabaseSynced = Boolean(apiData.sync?.supabase);
+      whatsappNotificationSent = Boolean(apiData.sync?.whatsappAutomated);
+      serverRecord = apiData.data;
     }
   } catch (e) {
     console.warn('Backend /api/rsvp offline or unreachable, using client sync:', e);
   }
 
+  const finalRecord = serverRecord || newRecord;
+  if (googleSheetsSynced) finalRecord.sheets_sync_status = 'synced';
+  if (whatsappNotificationSent) finalRecord.whatsapp_notify_status = 'sent';
+
   // 2. Client-side Google Sheets direct webhook fallback if configured and server didn't sync
   const webhookUrl = googleSheetsWebhookUrl || (typeof window !== 'undefined' ? window.__VITE_GOOGLE_SHEETS_WEBHOOK_URL : '');
   if (webhookUrl && !googleSheetsSynced) {
     try {
-      const hasEvent = pattern => (newRecord.events_attending || []).some(ev => pattern.test(ev));
       const payload = {
-        submission_id: newRecord.submission_id || newRecord.id,
-        timestamp: timestampIST,
-        guest_name: newRecord.guest_name,
-        phone: newRecord.phone.startsWith('+') ? `'${newRecord.phone}` : `'${newRecord.phone}`,
-        side: newRecord.side,
-        attending: newRecord.attending,
-        guest_count: newRecord.guest_count,
-        arrival_date: newRecord.arrival_date || '14 February 2027',
-        arrival_time: newRecord.arrival_time || '10:30 AM',
-        blessing_message: newRecord.blessing_message || '',
-        ganesh_poojan: hasEvent(/Ganesh/i) ? 'YES' : 'NO',
-        haldi_carnival: hasEvent(/Haldi/i) ? 'YES' : 'NO',
-        sangeet: hasEvent(/Sangeet/i) ? 'YES' : 'NO',
-        wedding: hasEvent(/Varmala|Barat|Wedding/i) ? 'YES' : 'NO',
-        arrival_info: newRecord.arrival_info,
-        needs_accommodation: 'No'
+        rsvp_id: finalRecord.rsvp_id,
+        submitted_at: finalRecord.submitted_at,
+        guest_name: finalRecord.guest_name,
+        phone: finalRecord.phone.startsWith('+') ? `'${finalRecord.phone}` : `'${finalRecord.phone}`,
+        side: finalRecord.side,
+        attending: finalRecord.attending,
+        guest_count: finalRecord.guest_count,
+        events_attending: (finalRecord.events_attending || []).join('; '),
+        arrival_date: finalRecord.arrival_date || '14 February 2027',
+        arrival_time: finalRecord.arrival_time || '10:30 AM',
+        blessing_message: finalRecord.blessing_message || '',
+        community_invite_status: finalRecord.community_consent ? 'Invitation Available' : 'Not Opted In',
+        whatsapp_notify_status: finalRecord.whatsapp_notify_status,
+        last_updated: finalRecord.last_updated
       };
 
       await fetch(webhookUrl, {
@@ -319,6 +368,7 @@ export async function submitRsvp(formData) {
         body: JSON.stringify(payload)
       });
       googleSheetsSynced = true;
+      finalRecord.sheets_sync_status = 'synced';
     } catch (err) {
       console.warn('Client Google Sheets webhook fallback error:', err);
     }
@@ -327,35 +377,41 @@ export async function submitRsvp(formData) {
   // 3. Client-side Supabase direct insert fallback
   if (supabase && !supabaseSynced) {
     try {
-      await supabase.from('wedding_rsvps').insert([newRecord]);
+      await supabase.from('wedding_rsvps').insert([finalRecord]);
       supabaseSynced = true;
     } catch (err) {
       console.warn('Client Supabase fallback error:', err);
     }
   }
 
-  // 4. Save to localStorage
+  // 4. Save to localStorage with deduplication by phone / rsvp_id
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : INITIAL_BLESSINGS;
     const existing = Array.isArray(parsed) ? parsed : [];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([newRecord, ...existing.filter(item => item.phone !== newRecord.phone)]));
+    const cleanPhone = finalRecord.phone.replace(/\D/g, '');
+    const filtered = existing.filter(item => 
+      item.rsvp_id !== finalRecord.rsvp_id &&
+      (item.phone || '').replace(/\D/g, '') !== cleanPhone
+    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([finalRecord, ...filtered]));
   } catch (err) {
     console.error('Local storage save error:', err);
   }
 
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('wedding_rsvp_added', { detail: newRecord }));
+    window.dispatchEvent(new CustomEvent('wedding_rsvp_added', { detail: finalRecord }));
   }
 
   return {
     success: true,
-    data: newRecord,
+    data: finalRecord,
     backend: serverSynced ? 'server' : (supabaseSynced ? 'supabase' : (googleSheetsSynced ? 'googleSheets' : 'local')),
     cloudSync: {
       server: serverSynced,
       googleSheets: googleSheetsSynced,
-      supabase: supabaseSynced
+      supabase: supabaseSynced,
+      whatsapp: whatsappNotificationSent
     }
   };
 }

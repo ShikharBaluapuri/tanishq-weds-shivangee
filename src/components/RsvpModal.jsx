@@ -1,4 +1,4 @@
-import { createWhatsAppLink, formatRsvpConfirmation } from '../lib/whatsapp';
+import { createWhatsAppLink, formatRsvpConfirmation, getFamilyRecipient } from '../lib/whatsapp';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,7 +17,8 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  MessageCircle
 } from 'lucide-react';
 import { submitRsvp } from '../services/rsvpService';
 import { BotanicalDivider } from './BespokeIcons';
@@ -365,7 +366,8 @@ export default function RsvpModal({ isOpen, onClose }) {
     needs_accommodation: 'No',
     blessing_message: '',
     dietary_notes: '',
-    event_notes: ''
+    event_notes: '',
+    community_consent: false
   });
 
   const [errors, setErrors] = useState({});
@@ -468,7 +470,8 @@ export default function RsvpModal({ isOpen, onClose }) {
       needs_accommodation: 'No',
       dietary_notes: '',
       event_notes: '',
-      blessing_message: (formData.blessing_message || '').trim()
+      blessing_message: (formData.blessing_message || '').trim(),
+      community_consent: Boolean(formData.community_consent)
     };
 
     try {
@@ -492,10 +495,16 @@ export default function RsvpModal({ isOpen, onClose }) {
     }
   };
 
-  const getWhatsAppShareUrl = () => createWhatsAppLink(
-    '919425006278',
-    formatRsvpConfirmation(submittedData || formData)
-  );
+  const COMMUNITY_INVITE_URL = import.meta.env.VITE_WHATSAPP_COMMUNITY_URL || 'https://chat.whatsapp.com/invite/tanishq-shivangee';
+
+  const getWhatsAppShareUrl = () => {
+    const data = submittedData || formData;
+    const recipient = getFamilyRecipient(data.side);
+    return createWhatsAppLink(
+      recipient,
+      formatRsvpConfirmation(data)
+    );
+  };
 
   return (
     <div 
@@ -535,12 +544,16 @@ export default function RsvpModal({ isOpen, onClose }) {
           </span>
 
           <h3 className="font-cormorant text-2xl sm:text-3xl uppercase tracking-[0.18em] font-light text-[#343F35] mt-0.5">
-            {step === 4 ? 'Digital Boarding Pass' : 'Wedding Response Card'}
+            {step === 4 
+              ? (submittedData?.attending === 'Regretfully Declining' ? 'Response Received' : 'Thank You for Your RSVP!') 
+              : 'Wedding Response Card'}
           </h3>
 
           <p className="font-cormorant italic text-xs sm:text-sm text-[#657968] mt-0.5">
             {step === 4 
-              ? 'Your presence is our cherished blessing. See you in Chhindwara!' 
+              ? (submittedData?.attending === 'Regretfully Declining' 
+                  ? 'Your heartfelt blessings and warmth mean the world to Tanishq & Shivangee.' 
+                  : 'We are delighted to celebrate this beautiful occasion with you.') 
               : `Step ${step} of 3: ${
                   step === 1 ? 'Guest Information' : step === 2 ? 'Attendance & Headcount' : 'Final Details'
                 }`}
@@ -839,6 +852,26 @@ export default function RsvpModal({ isOpen, onClose }) {
                     </div>
                   </div>
 
+                  {/* Optional WhatsApp Wedding Community Consent */}
+                  <div className="rounded-2xl bg-white/80 border border-[#C3A56B]/35 p-3.5 text-left shadow-xs">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.community_consent}
+                        onChange={(e) => setFormData({ ...formData, community_consent: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 rounded border-[#C3A56B]/60 text-[#41584C] focus:ring-[#41584C] cursor-pointer"
+                      />
+                      <div className="text-xs text-[#343F35] font-sans leading-relaxed">
+                        <strong className="font-semibold block text-[#2C3E34]">
+                          WhatsApp Wedding Community
+                        </strong>
+                        <span className="text-[#657968]">
+                          I would like to receive wedding updates and a WhatsApp community invitation.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
                   {/* Hospitable reassurance note */}
                   <div className="p-3 rounded-2xl bg-[#EAE2D3]/40 border border-[#C3A56B]/30 text-center">
                     <p className="font-cormorant italic text-xs sm:text-sm text-[#343F35]">
@@ -886,18 +919,77 @@ export default function RsvpModal({ isOpen, onClose }) {
                       </div>
                     </div>
                   </div>
+
+                  {/* Optional WhatsApp Wedding Community Consent for Declining Guests */}
+                  <div className="rounded-2xl bg-white/80 border border-[#C3A56B]/35 p-3.5 text-left shadow-xs">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.community_consent}
+                        onChange={(e) => setFormData({ ...formData, community_consent: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 rounded border-[#C3A56B]/60 text-[#41584C] focus:ring-[#41584C] cursor-pointer"
+                      />
+                      <div className="text-xs text-[#343F35] font-sans leading-relaxed">
+                        <strong className="font-semibold block text-[#2C3E34]">
+                          WhatsApp Wedding Community
+                        </strong>
+                        <span className="text-[#657968]">
+                          I would like to receive wedding updates and celebration photos.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               )}
             </motion.div>
           )}
 
-          {/* STEP 4: DIGITAL BOARDING PASS WITH CUSTOM MONOGRAM CREST */}
+          {/* STEP 4: BEAUTIFUL CONFIRMATION & WEDDING COMMUNITY INVITATION */}
           {step === 4 && submittedData && (
             <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
-              <div role="status" aria-live="polite" className="flex items-center gap-2 rounded-2xl border border-[#41584C]/20 bg-[#EAE2D3]/60 px-3 py-2.5 text-xs text-[#343F35]">
-                <CheckCircle2 className="h-4 w-4 text-[#41584C]" />
-                <span>Your RSVP is confirmed and ready to share with the hosts.</span>
+              <div role="status" aria-live="polite" className="flex items-center justify-between gap-2 rounded-2xl border border-[#41584C]/20 bg-[#EAE2D3]/60 px-3.5 py-2.5 text-xs text-[#343F35]">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#41584C] flex-shrink-0" />
+                  <span>RSVP received &amp; logged successfully.</span>
+                </div>
+                <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/80 border border-[#C3A56B]/30 text-[#343F35] font-semibold">
+                  {submittedData.rsvp_id || 'RSVP-2027'}
+                </span>
               </div>
+
+              {/* Official WhatsApp Wedding Community Invitation Card */}
+              {(submittedData.attending === 'Joyfully Attending' || submittedData.community_consent) && (
+                <div className="relative p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#F5F0E5] via-[#FDFBF7] to-[#F5F0E5] border border-[#C3A56B]/40 shadow-sm text-left">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-full bg-[#25D366]/15 border border-[#25D366]/35 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[10px] uppercase font-sans font-semibold tracking-widest text-[#657968] block">
+                        Official WhatsApp Community
+                      </span>
+                      <h4 className="font-cormorant text-lg sm:text-xl font-semibold text-[#343F35] leading-tight">
+                        Tanishq &amp; Shivangee
+                      </h4>
+                      <p className="text-xs text-[#657968] font-sans mt-0.5 leading-relaxed">
+                        Join our wedding community for celebration schedules, resort concierge, and live wedding photos.
+                      </p>
+
+                      <a
+                        href={COMMUNITY_INVITE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 mt-3 px-5 py-2.5 rounded-full bg-[#25D366] text-white text-xs font-sans font-semibold hover:bg-[#1EBE5D] transition-all shadow-xs"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Join Our Wedding WhatsApp Community</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Admittance Pass Card */}
               <div className="relative bg-white rounded-3xl p-5 sm:p-7 border border-[#C3A56B]/40 shadow-botanical overflow-hidden">
                 <div className="flex items-center justify-between pb-3.5 border-b border-[#C3A56B]/20">
                   <div className="flex items-center gap-3">
@@ -916,7 +1008,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                     </div>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-[#EAE2D3] text-[#41584C] border border-[#41584C]/30 text-[10px] font-sans font-bold uppercase">
-                    Confirmed
+                    {submittedData.attending === 'Joyfully Attending' ? 'Confirmed' : 'Recorded'}
                   </span>
                 </div>
 
@@ -976,8 +1068,8 @@ export default function RsvpModal({ isOpen, onClose }) {
 
                 <div className="pt-3.5 flex items-center justify-between text-xs font-sans">
                   <div>
-                    <span className="text-[10px] text-[#657968] block">Host Contact:</span>
-                    <span className="font-semibold text-[#343F35]">9425006278 • 8623876930</span>
+                    <span className="text-[10px] text-[#657968] block">Host Contacts:</span>
+                    <span className="font-semibold text-[#343F35]">9425006278 • 8319433078</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <QrCode className="w-6 h-6 text-[#343F35]/70" />

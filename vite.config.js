@@ -12,17 +12,15 @@ function apiDevMiddleware() {
         const urlPath = req.url.split('?')[0];
         const apiName = urlPath.replace('/api/', '');
 
+        const validApis = ['verify-pin', 'rsvp', 'admin-rsvps', 'test-sheets', 'retry-sync'];
+        if (!validApis.includes(apiName)) return next();
+
         try {
-          let handlerModule = null;
-          if (apiName === 'verify-pin') {
-            handlerModule = await import('./api/verify-pin.js');
-          } else if (apiName === 'rsvp') {
-            handlerModule = await import('./api/rsvp.js');
-          } else if (apiName === 'admin-rsvps') {
-            handlerModule = await import('./api/admin-rsvps.js');
-          } else if (apiName === 'test-sheets') {
-            handlerModule = await import('./api/test-sheets.js');
-          }
+          const { pathToFileURL } = await import('url');
+          const path = await import('path');
+          const filePath = path.resolve(`./api/${apiName}.js`);
+          const fileUrl = `${pathToFileURL(filePath).href}?t=${Date.now()}`;
+          const handlerModule = await import(fileUrl);
 
           if (handlerModule && handlerModule.default) {
             let body = '';

@@ -8,7 +8,6 @@ import {
   CheckCircle, 
   CheckCircle2,
   XCircle, 
-  Hotel, 
   Search, 
   Download, 
   Copy, 
@@ -22,16 +21,29 @@ import {
   LoaderCircle,
   AlertCircle,
   Sparkles,
-  Send
+  Send,
+  ExternalLink,
+  MessageCircle,
+  FolderCheck,
+  ShieldCheck,
+  HelpCircle,
+  PhoneCall,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   getAllRsvps, 
   calculateHeadcountMetrics, 
   verifyHostPin, 
   fetchProtectedAdminRsvps,
-  testGoogleSheetsConnection 
+  testGoogleSheetsConnection,
+  retryRsvpSync
 } from '../services/rsvpService';
-import { VintageCornerFiligree } from './BespokeIcons';
+import { 
+  FAMILY_RECIPIENTS, 
+  getFamilyRecipient, 
+  formatFamilyNotificationMessage 
+} from '../lib/whatsapp';
 
 export default function AdminDashboardModal({ isOpen, onClose }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,16 +53,45 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('analytics'); // analytics | guests | setup
 
   const [rsvps, setRsvps] = useState([]);
-  const [cloudStatus, setCloudStatus] = useState({ googleSheetsConfigured: false, supabaseConfigured: false });
+  const [telemetry, setTelemetry] = useState(null);
+  const [cloudStatus, setCloudStatus] = useState({ 
+    googleSheetsConfigured: false, 
+    supabaseConfigured: false,
+    whatsappAutomatedConfigured: false,
+    whatsappCommunityConfigured: false,
+    whatsappCommunityUrl: '',
+    spreadsheetName: 'Tanishq & Shivangee — Wedding RSVP 2027',
+    driveFolderName: 'Tanishq & Shivangee — Wedding RSVP'
+  });
+
+  // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSide, setSelectedSide] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedSync, setSelectedSync] = useState('All'); // All | synced | pending
+  const [selectedWhatsapp, setSelectedWhatsapp] = useState('All'); // All | sent | pending_manual_dispatch | failed
+  const [selectedCommunity, setSelectedCommunity] = useState('All'); // All | opted_in | opted_out
+
+  // Configurable settings
+  const [friendsRecipient, setFriendsRecipient] = useState(() => {
+    return localStorage.getItem('wedding_friends_recipient') || '+91 9425006278';
+  });
+  const [sheetsUrl, setSheetsUrl] = useState(() => {
+    return localStorage.getItem('wedding_google_sheet_url') || import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
+  });
+
   const [copiedCode, setCopiedCode] = useState('');
+  const [copiedId, setCopiedId] = useState('');
 
   // Diagnostic test state for Google Sheets
   const [customWebhookInput, setCustomWebhookInput] = useState('');
   const [isTestingSheet, setIsTestingSheet] = useState(false);
   const [sheetTestResult, setSheetTestResult] = useState(null);
+
+  // Retry state
+  const [retryingId, setRetryingId] = useState(null);
+  const [isRetryingAll, setIsRetryingAll] = useState(false);
+  const [retryNotification, setRetryNotification] = useState(null);
 
   useEffect(() => {
     if (isOpen && isAuthenticated) {
@@ -62,8 +103,14 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     try {
       const response = await fetchProtectedAdminRsvps();
       setRsvps(response.rsvps || []);
+      if (response.telemetry) {
+        setTelemetry(response.telemetry);
+      }
       if (response.status) {
-        setCloudStatus(response.status);
+        setCloudStatus(prev => ({ ...prev, ...response.status }));
+        if (response.status.whatsappCommunityUrl && !localStorage.getItem('wedding_community_url')) {
+          localStorage.setItem('wedding_community_url', response.status.whatsappCommunityUrl);
+        }
       }
     } catch {
       const fallbackData = await getAllRsvps();
@@ -109,20 +156,101 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     }
   };
 
+  const handleRetrySingle = async (rsvpId, action = 'all') => {
+    setRetryingId(rsvpId);
+    setRetryNotification(null);
+    try {
+      const res = await retryRsvpSync({ rsvp_id: rsvpId, action });
+      if (res.success) {
+        setRetryNotification({ type: 'success', text: `Sync retry succeeded for RSVP ${rsvpId}` });
+        await loadData();
+      } else {
+        setRetryNotification({ type: 'error', text: res.error || 'Retry attempt failed. Check connection.' });
+      }
+    } catch (e) {
+      setRetryNotification({ type: 'error', text: e.message });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleRetryAllPending = async (action = 'all') => {
+    setIsRetryingAll(true);
+    setRetryNotification(null);
+    try {
+      const res = await retryRsvpSync({ action });
+      if (res.success) {
+        setRetryNotification({ 
+          type: 'success', 
+          text: `Processed ${res.processedCount || 0} pending records successfully.` 
+        });
+        await loadData();
+      } else {
+        setRetryNotification({ type: 'error', text: res.error || 'Retry operations failed.' });
+      }
+    } catch (e) {
+      setRetryNotification({ type: 'error', text: e.message });
+    } finally {
+      setIsRetryingAll(false);
+    }
+  };
+
+  const handleSaveFriendsRecipient = (val) => {
+    setFriendsRecipient(val);
+    localStorage.setItem('wedding_friends_recipient', val);
+    setRetryNotification({ type: 'success', text: `Friends & Colleagues routing set to ${val}` });
+  };
+
+  const handleSaveSheetsUrl = (val) => {
+    setSheetsUrl(val);
+    localStorage.setItem('wedding_google_sheet_url', val);
+  };
+
+  const handleOpenFamilyWhatsApp = (guest) => {
+    const recipient = getFamilyRecipient(guest.side, friendsRecipient);
+    const msg = formatFamilyNotificationMessage({
+      guest_name: guest.guest_name,
+      side: guest.side,
+      attending: guest.attending,
+      guest_count: guest.guest_count || (guest.attending === 'Regretfully Declining' ? 0 : 1),
+      events_attending: guest.events_attending,
+      arrival_date: guest.arrival_date,
+      arrival_time: guest.arrival_time,
+      blessing_message: guest.blessing_message,
+      rsvp_id: guest.rsvp_id || guest.submission_id || guest.id
+    });
+    const url = `https://wa.me/${recipient}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   if (!isOpen) return null;
 
   // Filter guests
   const filteredGuests = rsvps.filter((g) => {
     const matchesSearch = 
       (g.guest_name && g.guest_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (g.phone && g.phone.includes(searchQuery));
+      (g.phone && g.phone.includes(searchQuery)) ||
+      (g.rsvp_id && g.rsvp_id.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesSide = selectedSide === 'All' || 
       g.side === selectedSide || 
-      (selectedSide === 'Kushwah Family' && g.side === 'Verma / Kushwah Family');
+      (selectedSide === 'Kushwah Family' && (g.side === 'Verma / Kushwah Family' || (g.side || '').toLowerCase().includes('kushwah')));
+    
     const matchesStatus = selectedStatus === 'All' || g.attending === selectedStatus;
 
-    return matchesSearch && matchesSide && matchesStatus;
+    const matchesSync = selectedSync === 'All' || 
+      (selectedSync === 'synced' && g.sheets_sync_status === 'synced') ||
+      (selectedSync === 'pending' && g.sheets_sync_status !== 'synced');
+
+    const matchesWhatsapp = selectedWhatsapp === 'All' || 
+      g.whatsapp_notify_status === selectedWhatsapp ||
+      (selectedWhatsapp === 'pending_manual_dispatch' && (!g.whatsapp_notify_status || g.whatsapp_notify_status === 'pending_manual_dispatch'));
+
+    const matchesCommunity = selectedCommunity === 'All' ||
+      (selectedCommunity === 'opted_in' && g.community_consent) ||
+      (selectedCommunity === 'opted_out' && !g.community_consent);
+
+    return matchesSearch && matchesSide && matchesStatus && matchesSync && matchesWhatsapp && matchesCommunity;
   });
 
   const metrics = calculateHeadcountMetrics(rsvps);
@@ -130,46 +258,44 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   // CSV Export logic
   const exportToCsv = () => {
     const headers = [
-      'Submission ID',
-      'Submitted At (IST)',
-      'Guest Name',
-      'Phone / WhatsApp',
-      'Side / Affiliation',
-      'Attendance Response',
+      'RSVP ID',
+      'Submission Date & Time',
+      'Guest / Family Name',
+      'WhatsApp Number',
+      'Guest Side',
+      'Attendance Status',
       'Number of Guests',
+      'Selected Wedding Functions',
       'Expected Arrival Date',
       'Expected Arrival Time',
-      'Blessings / Message',
-      'Ganesh Poojan',
-      'Haldi Carnival',
-      'Sham-e-Sangeet',
-      'The Wedding',
-      'Arrival Logistics'
+      'Wedding Blessing / Message',
+      'Community Invitation Status',
+      'WhatsApp Notification Status',
+      'Last Updated'
     ];
 
     const rows = filteredGuests.map(g => [
-      `"${g.submission_id || g.id || ''}"`,
+      `"${g.rsvp_id || g.submission_id || g.id || ''}"`,
       `"${g.submitted_at || (g.created_at ? new Date(g.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '')}"`,
       `"${(g.guest_name || '').replace(/"/g, '""')}"`,
       `"${g.phone || ''}"`,
       `"${g.side || ''}"`,
       `"${g.attending || ''}"`,
       g.guest_count || (g.attending === 'Regretfully Declining' ? 0 : 1),
+      `"${Array.isArray(g.events_attending) ? g.events_attending.join('; ') : (g.events_attending || '')}"`,
       `"${g.arrival_date || ''}"`,
       `"${g.arrival_time || ''}"`,
       `"${(g.blessing_message || '').replace(/"/g, '""')}"`,
-      g.events_attending?.some(e => e.toLowerCase().includes('ganesh')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.toLowerCase().includes('haldi')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.toLowerCase().includes('sangeet')) ? 'YES' : 'NO',
-      g.events_attending?.some(e => e.toLowerCase().includes('varmala') || e.toLowerCase().includes('barat') || e.toLowerCase().includes('wedding')) ? 'YES' : 'NO',
-      `"${(g.arrival_info || '').replace(/"/g, '""')}"`
+      `"${g.community_invite_status || (g.community_consent ? 'Invitation Available' : 'Not Opted In')}"`,
+      `"${g.whatsapp_notify_status || 'Pending Manual Dispatch'}"`,
+      `"${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `Tanishq_Shivangee_Wedding_RSVPs_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Tanishq_Shivangee_Wedding_RSVP_2027_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -181,96 +307,129 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setTimeout(() => setCopiedCode(''), 2500);
   };
 
-  // Google Apps Script code with 10 exact columns and formula injection protection
+  const copyRsvpId = (id) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(''), 2000);
+  };
+
+  // Google Apps Script code matching google-apps-script/Code.gs
   const GOOGLE_SCRIPT_CODE = `/**
- * Tanishq weds Shivangee • Official RSVP Webhook for Google Sheets
- * 1. Open Google Sheets -> Extensions -> Apps Script
- * 2. Paste this code into Code.gs
- * 3. Deploy -> New Deployment -> Web App
- *    - Execute as: Me (your Google account)
- *    - Who has access: Anyone
- * 4. Copy Web App URL into .env or Vercel as VITE_GOOGLE_SHEETS_WEBHOOK_URL
+ * TANISHQ & SHIVANGEE — WEDDING RSVP 2027
+ * OFFICIAL GOOGLE SHEETS & GOOGLE DRIVE AUTOMATION SCRIPT
+ *
+ * Folder:      "Tanishq & Shivangee — Wedding RSVP"
+ * Spreadsheet: "Tanishq & Shivangee — Wedding RSVP 2027"
+ * 
+ * Exact 14 Columns:
+ * 1. RSVP ID  2. Submission Date & Time  3. Guest / Family Name
+ * 4. WhatsApp Number  5. Guest Side  6. Attendance Status
+ * 7. Number of Guests  8. Selected Wedding Functions
+ * 9. Expected Arrival Date  10. Expected Arrival Time
+ * 11. Wedding Blessing / Message  12. Community Invitation Status
+ * 13. WhatsApp Notification Status  14. Last Updated
  */
 
-function sanitizeForSheets(v) {
-  if (typeof v !== 'string') return v;
-  return /^[=+\\-@]/.test(v) ? "'" + v : v;
+const FOLDER_NAME = 'Tanishq & Shivangee — Wedding RSVP';
+const SHEET_NAME = 'Tanishq & Shivangee — Wedding RSVP 2027';
+
+const HEADERS = [
+  'RSVP ID', 'Submission Date & Time', 'Guest / Family Name',
+  'WhatsApp Number', 'Guest Side', 'Attendance Status',
+  'Number of Guests', 'Selected Wedding Functions',
+  'Expected Arrival Date', 'Expected Arrival Time',
+  'Wedding Blessing / Message', 'Community Invitation Status',
+  'WhatsApp Notification Status', 'Last Updated'
+];
+
+function sanitizeCell(val) {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  return /^[=+\\-@]/.test(str) ? "'" + str : str;
+}
+
+function getOrCreateFolder() {
+  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(FOLDER_NAME);
+}
+
+function getOrCreateSpreadsheet() {
+  const folder = getOrCreateFolder();
+  const files = folder.getFilesByName(SHEET_NAME);
+  let ss = files.hasNext() ? SpreadsheetApp.open(files.next()) : SpreadsheetApp.create(SHEET_NAME);
+  if (!files.hasNext()) {
+    const file = DriveApp.getFileById(ss.getId());
+    folder.addFile(file);
+    DriveApp.getRootFolder().removeFile(file);
+  }
+  let sheet = ss.getSheetByName('RSVP Records') || ss.getSheets()[0];
+  sheet.setName('RSVP Records');
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    const range = sheet.getRange(1, 1, 1, HEADERS.length);
+    range.setBackground('#2C3E34').setFontColor('#FFFFFF').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
 }
 
 function doPost(e) {
-  var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
-  
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("RSVP Responses") || ss.insertSheet("RSVP Responses");
+    const payload = JSON.parse(e.postData.contents);
+    const sheet = getOrCreateSpreadsheet();
+    const data = sheet.getDataRange().getValues();
     
-    // Auto-create headers with beautiful styling if new sheet
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Submission ID",
-        "Submitted At (IST)",
-        "Guest Name / Family Representative",
-        "Phone / WhatsApp Number",
-        "Guest Side / Family Affiliation",
-        "Attendance Response",
-        "Number of Guests",
-        "Expected Arrival Date",
-        "Expected Arrival Time",
-        "Blessings / Message",
-        "Ganesh Poojan (14 Feb, 9 AM)",
-        "Rangrez Haldi (14 Feb, 12 PM)",
-        "Sham-e-Sangeet (14 Feb, 6 PM)",
-        "The Royal Wedding (15 Feb, 9 AM)",
-        "Arrival Logistics & Notes"
-      ]);
-      sheet.getRange(1, 1, 1, 15)
-        .setFontWeight("bold")
-        .setBackground("#F3E5AB")
-        .setFontColor("#354F3B");
-      sheet.setFrozenRows(1);
+    const rsvpId = sanitizeCell(payload.rsvp_id || 'RSVP-' + Date.now().toString(36).toUpperCase());
+    const rawPhone = String(payload.phone || '').replace(/\\D/g, '');
+    const phone = "'" + rawPhone;
+    
+    const rowValues = [
+      rsvpId,
+      sanitizeCell(payload.submitted_at || Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm a')),
+      sanitizeCell(payload.guest_name),
+      phone,
+      sanitizeCell(payload.side || 'Friends & Colleagues'),
+      sanitizeCell(payload.attending || 'Joyfully Attending'),
+      payload.attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1),
+      sanitizeCell(Array.isArray(payload.events_attending) ? payload.events_attending.join('; ') : payload.events_attending),
+      sanitizeCell(payload.arrival_date || ''),
+      sanitizeCell(payload.arrival_time || ''),
+      sanitizeCell(payload.blessing_message || ''),
+      sanitizeCell(payload.community_invite_status || (payload.community_consent ? 'Invitation Available' : 'Not Opted In')),
+      sanitizeCell(payload.whatsapp_notify_status || 'Pending Manual Dispatch'),
+      Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM yyyy, hh:mm:ss a')
+    ];
+
+    // Find and update existing row (deduplication)
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if ((rsvpId && String(data[i][0]).trim() === rsvpId) || (rawPhone && String(data[i][3]).replace(/\\D/g, '') === rawPhone)) {
+        rowIndex = i + 1;
+        break;
+      }
     }
-    
-    var data = JSON.parse(e.postData.contents);
-    
-    sheet.appendRow([
-      sanitizeForSheets(data.submission_id || Utilities.getUuid()),
-      sanitizeForSheets(data.timestamp || new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })),
-      sanitizeForSheets(data.guest_name),
-      sanitizeForSheets("'" + (data.phone || "")),
-      sanitizeForSheets(data.side),
-      sanitizeForSheets(data.attending),
-      data.guest_count || (data.attending === "Regretfully Declining" ? 0 : 1),
-      sanitizeForSheets(data.arrival_date || ""),
-      sanitizeForSheets(data.arrival_time || ""),
-      sanitizeForSheets(data.blessing_message || ""),
-      sanitizeForSheets(data.ganesh_poojan || "NO"),
-      sanitizeForSheets(data.haldi_carnival || "NO"),
-      sanitizeForSheets(data.sangeet || "NO"),
-      sanitizeForSheets(data.wedding || "NO"),
-      sanitizeForSheets(data.arrival_info || "")
-    ]);
-    
-    return ContentService.createTextOutput(JSON.stringify({ 
-      status: "success", 
-      guest: data.guest_name 
-    })).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch(error) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      status: "error", 
-      message: error.toString() 
-    })).setMimeType(ContentService.MimeType.JSON);
+
+    if (rowIndex > 0) {
+      if (data[rowIndex - 1][0]) rowValues[0] = data[rowIndex - 1][0];
+      sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      sheet.appendRow(rowValues);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ success: true, rsvp_id: rowValues[0] })).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
   }
 }`;
 
-  // Supabase SQL schema template
-  const SUPABASE_SQL_CODE = `-- Table for Tanishq weds Shivangee RSVPs
+  const SUPABASE_SQL_CODE = `-- Official Schema for Tanishq & Shivangee RSVP Management
 CREATE TABLE IF NOT EXISTS public.wedding_rsvps (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  rsvp_id TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
+  submitted_at TEXT NOT NULL,
   guest_name TEXT NOT NULL,
   phone TEXT NOT NULL,
   side TEXT DEFAULT 'Friends & Colleagues',
@@ -281,42 +440,44 @@ CREATE TABLE IF NOT EXISTS public.wedding_rsvps (
   arrival_time TEXT,
   arrival_info TEXT,
   needs_accommodation TEXT DEFAULT 'No',
-  blessing_message TEXT
+  blessing_message TEXT,
+  community_consent BOOLEAN DEFAULT FALSE,
+  community_invite_status TEXT DEFAULT 'not_consented',
+  sheets_sync_status TEXT DEFAULT 'pending',
+  whatsapp_notify_status TEXT DEFAULT 'pending_manual_dispatch',
+  sheets_synced_at TIMESTAMPTZ,
+  whatsapp_sent_at TIMESTAMPTZ
 );
 
--- Row Level Security
 ALTER TABLE public.wedding_rsvps ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read" 
-ON public.wedding_rsvps FOR SELECT 
-USING (true);
-
-CREATE POLICY "Allow public insert" 
-ON public.wedding_rsvps FOR INSERT 
-WITH CHECK (true);
-
-ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
+CREATE POLICY "Allow public insert" ON public.wedding_rsvps FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-4xl bg-white rounded-3xl border border-[#C5A869]/40 shadow-2xl overflow-hidden my-6"
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="relative w-full max-w-5xl bg-white rounded-3xl border border-[#C5A869]/40 shadow-2xl overflow-hidden my-6"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between p-5 border-b border-[#C5A869]/30 bg-gradient-to-r from-[#F4F6F3] via-white to-[#F4F6F3]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#354F3B] text-[#E8E4D8] flex items-center justify-center">
-              <Lock className="w-4 h-4 text-[#C5A869]" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#354F3B] text-[#E8E4D8] flex items-center justify-center shadow-sm">
+              <ShieldCheck className="w-5 h-5 text-[#C5A869]" />
             </div>
             <div>
-              <h3 className="text-lg font-cormorant font-semibold text-[#1E2F23]">
-                Family Host Hospitality Dashboard
-              </h3>
-              <span className="text-[10px] font-sans text-[#7A917F] block">
-                Tanishq &amp; Shivangee • Real-Time Catering &amp; Guest Headcount
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-cormorant font-semibold text-[#1E2F23]">
+                  Host Management &amp; Guest Hospitality Dashboard
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-sans font-semibold">
+                  Official 2027
+                </span>
+              </div>
+              <span className="text-[11px] font-sans text-[#7A917F] block">
+                Tanishq &amp; Shivangee • Real-Time Google Sheets, WhatsApp &amp; Headcount Automation
               </span>
             </div>
           </div>
@@ -330,6 +491,30 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
           </button>
         </div>
 
+        {/* Notification Banner */}
+        {retryNotification && (
+          <div className={`px-6 py-2.5 text-xs font-sans flex items-center justify-between ${
+            retryNotification.type === 'success' 
+              ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200' 
+              : 'bg-red-50 text-red-800 border-b border-red-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              {retryNotification.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              )}
+              <span>{retryNotification.text}</span>
+            </div>
+            <button 
+              onClick={() => setRetryNotification(null)}
+              className="text-gray-400 hover:text-gray-700"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* PIN Authentication Screen */}
         {!isAuthenticated ? (
           <div className="p-8 sm:p-12 text-center max-w-sm mx-auto">
@@ -341,7 +526,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
               Host Security Verification
             </h4>
             <p className="text-xs text-[#7A917F] mb-6 font-sans">
-              Please enter your 4-digit family security PIN to access the host dashboard.
+              Enter the authorized family host PIN to access protected guest phone numbers, Google Sheets synchronization, and WhatsApp automation controls.
             </p>
 
             <form onSubmit={handlePinSubmit} className="space-y-4">
@@ -372,30 +557,67 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                 className="w-full py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
                 {isVerifying && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
-                <span>{isVerifying ? 'Verifying...' : 'Unlock Dashboard'}</span>
+                <span>{isVerifying ? 'Verifying...' : 'Unlock Host Dashboard'}</span>
               </button>
             </form>
           </div>
         ) : (
           /* Authenticated Dashboard */
           <div>
-            {/* Tabs Header */}
-            <div className="flex border-b border-[#C5A869]/20 bg-[#F4F6F3] px-6 gap-4 text-xs font-sans font-semibold">
+            {/* Quick Status Bar */}
+            <div className="bg-[#FAF7F2] border-b border-[#C5A869]/20 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-[11px] font-sans">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-1.5 text-[#1E2F23]">
+                  <span className={`w-2 h-2 rounded-full ${cloudStatus.googleSheetsConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                  <span className="font-semibold">Google Sheets:</span>
+                  <span className="text-[#55695C]">{cloudStatus.spreadsheetName}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[#1E2F23]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="font-semibold">WhatsApp Routing:</span>
+                  <span className="text-[#55695C]">Baluapuri (+91 9425006278) • Kushwah (+91 8319433078)</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {sheetsUrl && (
+                  <a
+                    href={sheetsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[#354F3B] hover:text-[#C5A869] font-medium"
+                  >
+                    <span>Open Connected Google Sheet</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <button
+                  onClick={loadData}
+                  className="p-1 text-gray-500 hover:text-[#354F3B] rounded-lg hover:bg-gray-100"
+                  title="Refresh Live Data"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs Navigation */}
+            <div className="flex border-b border-[#C5A869]/20 bg-[#F4F6F3] px-6 gap-2 text-xs font-sans font-semibold overflow-x-auto">
               <button
                 onClick={() => setActiveTab('analytics')}
-                className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
+                className={`py-3 px-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-all ${
                   activeTab === 'analytics'
                     ? 'border-[#354F3B] text-[#354F3B]'
                     : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
-                <span>Headcount Analytics</span>
+                <span>Headcount &amp; Hospitality Analytics</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('guests')}
-                className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
+                className={`py-3 px-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-all ${
                   activeTab === 'guests'
                     ? 'border-[#354F3B] text-[#354F3B]'
                     : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
@@ -407,14 +629,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
 
               <button
                 onClick={() => setActiveTab('setup')}
-                className={`py-3 border-b-2 flex items-center gap-1.5 transition-all ${
+                className={`py-3 px-3 border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-all ${
                   activeTab === 'setup'
                     ? 'border-[#354F3B] text-[#354F3B]'
                     : 'border-transparent text-[#7A917F] hover:text-[#354F3B]'
                 }`}
               >
                 <FileSpreadsheet className="w-4 h-4" />
-                <span>Google Sheet &amp; Database Sync</span>
+                <span>Integrations &amp; Automations</span>
               </button>
             </div>
 
@@ -430,6 +652,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
                       {metrics.totalRsvps}
                     </strong>
+                    <span className="text-[11px] text-gray-500 block mt-0.5">
+                      {metrics.declinedCount} Regretfully Declining
+                    </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
@@ -439,24 +664,107 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <strong className="text-2xl font-cormorant font-bold text-emerald-900">
                       {metrics.totalHeadcount} <span className="text-xs font-normal">Guests</span>
                     </strong>
+                    <span className="text-[11px] text-emerald-700 block mt-0.5">
+                      {metrics.attendingCount} Confirmed Families
+                    </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30">
                     <span className="text-[10px] text-[#7A917F] uppercase tracking-wider block font-semibold">
-                      Baluapuri Family
+                      Baluapuri Family (+91 9425006278)
                     </span>
                     <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
                       {metrics.sides.baluapuri} <span className="text-xs font-normal">Guests</span>
                     </strong>
+                    <span className="text-[11px] text-[#7A917F] block mt-0.5">
+                      Groom's Side RSVPs
+                    </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30">
                     <span className="text-[10px] text-[#7A917F] uppercase tracking-wider block font-semibold">
-                      Kushwah Family
+                      Kushwah Family (+91 8319433078)
                     </span>
                     <strong className="text-2xl font-cormorant font-bold text-[#1E2F23]">
                       {metrics.sides.kushwah} <span className="text-xs font-normal">Guests</span>
                     </strong>
+                    <span className="text-[11px] text-[#7A917F] block mt-0.5">
+                      Bride's Side RSVPs
+                    </span>
+                  </div>
+                </div>
+
+                {/* Automation Telemetry Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="p-4 rounded-2xl bg-white border border-[#C5A869]/30 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#354F3B]">
+                        Google Sheets Sync Status
+                      </span>
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <strong className="text-xl font-bold font-cormorant text-[#1E2F23]">
+                        {telemetry?.sync?.sheetsSynced ?? rsvps.filter(r => r.sheets_sync_status === 'synced').length}
+                      </strong>
+                      <span className="text-xs text-gray-500">Synced of {rsvps.length}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-amber-700 font-medium">
+                        {telemetry?.sync?.sheetsPending ?? rsvps.filter(r => r.sheets_sync_status !== 'synced').length} Pending Sync
+                      </span>
+                      <button
+                        onClick={() => handleRetryAllPending('sheets')}
+                        disabled={isRetryingAll}
+                        className="text-[#354F3B] hover:underline font-semibold"
+                      >
+                        {isRetryingAll ? 'Syncing...' : 'Sync Pending'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-[#C5A869]/30 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#354F3B]">
+                        WhatsApp Notifications
+                      </span>
+                      <MessageCircle className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <strong className="text-xl font-bold font-cormorant text-[#1E2F23]">
+                        {telemetry?.sync?.whatsappSent ?? rsvps.filter(r => r.whatsapp_notify_status === 'sent').length}
+                      </strong>
+                      <span className="text-xs text-gray-500">Delivered</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-amber-700 font-medium">
+                        {telemetry?.sync?.whatsappPendingManual ?? rsvps.filter(r => r.whatsapp_notify_status !== 'sent').length} Manual Dispatch Ready
+                      </span>
+                      <button
+                        onClick={() => setActiveTab('guests')}
+                        className="text-[#354F3B] hover:underline font-semibold"
+                      >
+                        View Guests
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-[#C5A869]/30 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#354F3B]">
+                        WhatsApp Community Opt-in
+                      </span>
+                      <Users className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <strong className="text-xl font-bold font-cormorant text-[#1E2F23]">
+                        {telemetry?.sync?.communityOptedIn ?? rsvps.filter(r => r.community_consent).length}
+                      </strong>
+                      <span className="text-xs text-gray-500">Guests Opted In</span>
+                    </div>
+                    <div className="mt-2 text-[11px] text-gray-500">
+                      Explicit Consent Only (Unselected Checkbox)
+                    </div>
                   </div>
                 </div>
 
@@ -514,85 +822,291 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
             {activeTab === 'guests' && (
               <div className="p-6 sm:p-8 space-y-4">
                 {/* Search & Filters Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by guest name or phone..."
-                      className="w-full pl-9 pr-4 py-2 rounded-xl bg-white border border-[#C5A869]/40 text-xs focus:outline-none"
-                    />
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="relative flex-1 min-w-[220px]">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by guest name, phone, or RSVP ID..."
+                        className="w-full pl-9 pr-4 py-2 rounded-xl bg-white border border-[#C5A869]/40 text-xs focus:outline-none focus:ring-1 focus:ring-[#354F3B]"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRetryAllPending('all')}
+                        disabled={isRetryingAll}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#C5A869]/40 text-[#354F3B] font-sans font-semibold text-xs hover:bg-[#F4F6F3] transition-all"
+                      >
+                        {isRetryingAll ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        <span>{isRetryingAll ? 'Syncing...' : 'Sync Pending to Sheets'}</span>
+                      </button>
+
+                      <button
+                        onClick={exportToCsv}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#354F3B] text-[#E8E4D8] font-sans font-medium text-xs hover:bg-[#2A3F2F] transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export CSV</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <select
-                    value={selectedSide}
-                    onChange={(e) => setSelectedSide(e.target.value)}
-                    className="px-3 py-2 rounded-xl bg-white border border-[#C5A869]/40 text-xs text-[#1E2F23]"
-                  >
-                    <option value="All">All Affiliations</option>
-                    <option value="Baluapuri Family">Baluapuri Family</option>
-                    <option value="Kushwah Family">Kushwah Family</option>
-                    <option value="Friends &amp; Colleagues">Friends &amp; Colleagues</option>
-                  </select>
+                  {/* Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-sans">
+                    <select
+                      value={selectedSide}
+                      onChange={(e) => setSelectedSide(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-xs text-[#1E2F23]"
+                    >
+                      <option value="All">All Families</option>
+                      <option value="Baluapuri Family">Baluapuri Family (+91 9425006278)</option>
+                      <option value="Kushwah Family">Kushwah Family (+91 8319433078)</option>
+                      <option value="Friends &amp; Colleagues">Friends &amp; Colleagues</option>
+                    </select>
 
-                  <button
-                    onClick={exportToCsv}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#354F3B] text-[#E8E4D8] font-sans font-medium text-xs hover:bg-[#2A3F2F] transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Export CSV (Excel)</span>
-                  </button>
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-xs text-[#1E2F23]"
+                    >
+                      <option value="All">All Attendance</option>
+                      <option value="Joyfully Attending">Joyfully Attending</option>
+                      <option value="Regretfully Declining">Regretfully Declining</option>
+                    </select>
+
+                    <select
+                      value={selectedSync}
+                      onChange={(e) => setSelectedSync(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-xs text-[#1E2F23]"
+                    >
+                      <option value="All">All Sheets Status</option>
+                      <option value="synced">✓ Synced to Sheets</option>
+                      <option value="pending">↻ Pending / Not Synced</option>
+                    </select>
+
+                    <select
+                      value={selectedWhatsapp}
+                      onChange={(e) => setSelectedWhatsapp(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-xs text-[#1E2F23]"
+                    >
+                      <option value="All">All WhatsApp Status</option>
+                      <option value="sent">✓ Automated Sent</option>
+                      <option value="pending_manual_dispatch">✉ Manual Dispatch Ready</option>
+                      <option value="failed">✕ Failed</option>
+                    </select>
+
+                    <select
+                      value={selectedCommunity}
+                      onChange={(e) => setSelectedCommunity(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-xs text-[#1E2F23]"
+                    >
+                      <option value="All">All Community Status</option>
+                      <option value="opted_in">✓ Opted In</option>
+                      <option value="opted_out">— Not Opted In</option>
+                    </select>
+
+                    {(selectedSide !== 'All' || selectedStatus !== 'All' || selectedSync !== 'All' || selectedWhatsapp !== 'All' || selectedCommunity !== 'All' || searchQuery) && (
+                      <button
+                        onClick={() => {
+                          setSelectedSide('All');
+                          setSelectedStatus('All');
+                          setSelectedSync('All');
+                          setSelectedWhatsapp('All');
+                          setSelectedCommunity('All');
+                          setSearchQuery('');
+                        }}
+                        className="text-xs text-[#354F3B] underline ml-2"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Table Container */}
-                <div className="overflow-x-auto rounded-2xl border border-[#C5A869]/30 max-h-96">
+                <div className="overflow-x-auto rounded-2xl border border-[#C5A869]/30 max-h-96 shadow-sm">
                   <table className="w-full text-left text-xs font-sans">
-                    <thead className="bg-[#F4F6F3] text-[#1E2F23] font-bold border-b border-[#C5A869]/30 sticky top-0">
+                    <thead className="bg-[#F4F6F3] text-[#1E2F23] font-bold border-b border-[#C5A869]/30 sticky top-0 z-10">
                       <tr>
-                        <th className="p-3">Guest Name</th>
-                        <th className="p-3">Phone</th>
+                        <th className="p-3">RSVP ID</th>
+                        <th className="p-3">Guest &amp; WhatsApp</th>
                         <th className="p-3">Side</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3 text-center">Headcount</th>
-                        <th className="p-3">Arrival Schedule</th>
-                        <th className="p-3">Blessing Note</th>
+                        <th className="p-3">Attendance</th>
+                        <th className="p-3 text-center">Count</th>
+                        <th className="p-3">Google Sheet</th>
+                        <th className="p-3">WhatsApp Alert</th>
+                        <th className="p-3">Community</th>
+                        <th className="p-3">Arrival &amp; Blessing</th>
+                        <th className="p-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredGuests.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="p-6 text-center text-gray-400">
-                            No RSVPs match your filters.
+                          <td colSpan={10} className="p-8 text-center text-gray-400">
+                            No RSVPs match your selected search or filter criteria.
                           </td>
                         </tr>
                       ) : (
-                        filteredGuests.map((g, idx) => (
-                          <tr key={g.id || g.submission_id || idx} className="hover:bg-[#F4F6F3]/60">
-                            <td className="p-3 font-semibold text-[#1E2F23]">{g.guest_name}</td>
-                            <td className="p-3 font-mono text-[#7A917F]">{g.phone}</td>
-                            <td className="p-3 text-gray-600">{g.side}</td>
-                            <td className="p-3">
-                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                g.attending === 'Joyfully Attending'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-stone-200 text-stone-700'
-                              }`}>
-                                {g.attending}
-                              </span>
-                            </td>
-                            <td className="p-3 text-center font-bold text-[#1E2F23]">
-                              {g.guest_count || (g.attending === 'Regretfully Declining' ? 0 : 1)}
-                            </td>
-                            <td className="p-3 text-gray-600">
-                              {g.arrival_date ? `${g.arrival_date} ${g.arrival_time || ''}` : (g.arrival_info || '—')}
-                            </td>
-                            <td className="p-3 text-gray-500 max-w-xs truncate" title={g.blessing_message}>
-                              {g.blessing_message || '—'}
-                            </td>
-                          </tr>
-                        ))
+                        filteredGuests.map((g, idx) => {
+                          const rsvpId = g.rsvp_id || g.submission_id || g.id || `RSVP-${idx}`;
+                          const isSynced = g.sheets_sync_status === 'synced';
+                          const isWhatsappSent = g.whatsapp_notify_status === 'sent';
+                          const isRetryingThis = retryingId === rsvpId;
+
+                          return (
+                            <tr key={rsvpId} className="hover:bg-[#F4F6F3]/60 transition-colors">
+                              {/* RSVP ID */}
+                              <td className="p-3 font-mono text-[11px] text-[#354F3B]">
+                                <div className="flex items-center gap-1">
+                                  <span>{rsvpId}</span>
+                                  <button
+                                    onClick={() => copyRsvpId(rsvpId)}
+                                    className="text-gray-400 hover:text-[#354F3B]"
+                                    title="Copy RSVP ID"
+                                  >
+                                    {copiedId === rsvpId ? (
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Guest Name & WhatsApp */}
+                              <td className="p-3">
+                                <strong className="block text-[#1E2F23]">{g.guest_name}</strong>
+                                <a
+                                  href={`https://wa.me/${(g.phone || '').replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-[11px] text-[#7A917F] hover:text-[#354F3B] hover:underline"
+                                >
+                                  {g.phone}
+                                </a>
+                              </td>
+
+                              {/* Side */}
+                              <td className="p-3 text-gray-600 font-medium">
+                                {g.side}
+                              </td>
+
+                              {/* Attendance */}
+                              <td className="p-3">
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  g.attending === 'Joyfully Attending'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-stone-200 text-stone-700'
+                                }`}>
+                                  {g.attending === 'Joyfully Attending' ? 'Attending' : 'Declining'}
+                                </span>
+                              </td>
+
+                              {/* Count */}
+                              <td className="p-3 text-center font-bold text-[#1E2F23]">
+                                {g.guest_count || (g.attending === 'Regretfully Declining' ? 0 : 1)}
+                              </td>
+
+                              {/* Google Sheet Sync Badge */}
+                              <td className="p-3">
+                                {isSynced ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold" title={`Synced at ${g.sheets_synced_at || 'Automatic'}`}>
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Synced</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleRetrySingle(rsvpId, 'sheets')}
+                                    disabled={isRetryingThis}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold hover:bg-amber-100 transition-all"
+                                    title="Click to retry Google Sheet sync"
+                                  >
+                                    <Clock className="w-3 h-3" />
+                                    <span>{isRetryingThis ? 'Syncing...' : 'Pending Sync'}</span>
+                                  </button>
+                                )}
+                              </td>
+
+                              {/* WhatsApp Notification Badge */}
+                              <td className="p-3">
+                                {isWhatsappSent ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Automated Sent</span>
+                                  </span>
+                                ) : g.whatsapp_notify_status === 'failed' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-[10px] font-semibold">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    <span>Failed</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
+                                    <MessageCircle className="w-3 h-3" />
+                                    <span>Ready for Host</span>
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Community Opt-in */}
+                              <td className="p-3">
+                                {g.community_consent ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                    ✓ Opted In
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">
+                                    — Not Opted
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Arrival & Blessing */}
+                              <td className="p-3 text-gray-600 max-w-[160px]">
+                                <div className="truncate font-medium text-[11px]">
+                                  {g.arrival_date ? `${g.arrival_date} ${g.arrival_time || ''}` : 'Schedule TBD'}
+                                </div>
+                                {g.blessing_message && (
+                                  <div className="truncate text-[10px] text-gray-400 italic" title={g.blessing_message}>
+                                    "{g.blessing_message}"
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Row Actions */}
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Send WhatsApp notification to family */}
+                                  <button
+                                    onClick={() => handleOpenFamilyWhatsApp(g)}
+                                    className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                    title={`Send notification to family contact (${getFamilyRecipient(g.side, friendsRecipient)})`}
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Retry Sync */}
+                                  <button
+                                    onClick={() => handleRetrySingle(rsvpId, 'all')}
+                                    disabled={isRetryingThis}
+                                    className="p-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-[#354F3B] transition-colors"
+                                    title="Retry Sync & WhatsApp job"
+                                  >
+                                    {isRetryingThis ? (
+                                      <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -605,57 +1119,166 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
               <div className="p-6 sm:p-8 space-y-6">
                 <div>
                   <h4 className="text-base font-cormorant font-bold text-[#1E2F23] mb-1">
-                    Live Google Sheets &amp; Cloud Database Connection
+                    Live Google Workspace, Drive &amp; WhatsApp Automations
                   </h4>
                   <p className="text-xs text-[#7A917F] font-sans leading-relaxed">
-                    Every successful RSVP submission is automatically sanitized against formula injection and saved directly to your real Google Sheet and cloud database.
+                    Every successful RSVP is validated, secured against formula injection, and synced to your authorized Google Spreadsheet inside Google Drive. Family WhatsApp alerts are routed according to affiliation.
                   </p>
                 </div>
 
-                {/* Connection Status & Live Ping Test Dock */}
-                <div className="p-5 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#354F3B] block">
-                        Google Sheets Live Sync Status
+                {/* Integration Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Google Sheets & Drive Box */}
+                  <div className="p-5 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                        <strong className="text-sm font-sans text-[#1E2F23]">
+                          Google Sheets &amp; Drive
+                        </strong>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        14 Exact Columns
                       </span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-                        <span className="text-xs font-medium text-[#1E2F23]">
-                          Active &amp; Ready for Webhook Logging
-                        </span>
+                    </div>
+
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Folder:</span>
+                        <strong className="text-[#1E2F23]">Tanishq &amp; Shivangee — Wedding RSVP</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Spreadsheet:</span>
+                        <strong className="text-[#1E2F23]">Tanishq &amp; Shivangee — Wedding RSVP 2027</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Security:</span>
+                        <span className="text-emerald-700 font-medium">Formula Injection Sanitization Enabled</span>
                       </div>
                     </div>
 
-                    <button
-                      onClick={handleTestGoogleSheets}
-                      disabled={isTestingSheet}
-                      className="px-4 py-2 rounded-xl bg-[#354F3B] text-[#E8E4D8] font-sans text-xs font-semibold hover:bg-[#2A3F2F] disabled:opacity-50 transition-all flex items-center gap-1.5"
-                    >
-                      {isTestingSheet ? (
-                        <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5" />
-                      )}
-                      <span>{isTestingSheet ? 'Testing Connection...' : 'Test Google Sheet Connection'}</span>
-                    </button>
+                    {/* Sheet Link Input / Open */}
+                    <div className="pt-2">
+                      <label className="text-[10px] font-sans font-bold text-gray-500 uppercase block mb-1">
+                        Spreadsheet Web URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={sheetsUrl}
+                          onChange={(e) => handleSaveSheetsUrl(e.target.value)}
+                          placeholder="https://docs.google.com/spreadsheets/d/..."
+                          className="flex-1 px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-mono"
+                        />
+                        {sheetsUrl && (
+                          <a
+                            href={sheetsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-[#354F3B] text-white text-xs font-medium flex items-center gap-1 hover:bg-[#2A3F2F]"
+                          >
+                            <span>Open</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Test Sheet Button */}
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        onClick={handleTestGoogleSheets}
+                        disabled={isTestingSheet}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-[#C5A869]/40 text-[#354F3B] text-xs font-semibold hover:bg-gray-50 transition-all flex items-center gap-1"
+                      >
+                        {isTestingSheet ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        <span>{isTestingSheet ? 'Testing Handshake...' : 'Test Sheet Webhook'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleRetryAllPending('sheets')}
+                        disabled={isRetryingAll}
+                        className="px-3 py-1.5 rounded-xl bg-[#354F3B] text-white text-xs font-medium hover:bg-[#2A3F2F]"
+                      >
+                        Sync All Pending
+                      </button>
+                    </div>
+
+                    {sheetTestResult && (
+                      <div className={`p-2.5 rounded-xl text-xs font-sans flex items-start gap-2 ${
+                        sheetTestResult.success ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300' : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}>
+                        {sheetTestResult.success ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <strong>{sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:'}</strong>
+                          <p className="mt-0.5">{sheetTestResult.message || sheetTestResult.error}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {sheetTestResult && (
-                    <div className={`p-3 rounded-xl text-xs font-sans flex items-start gap-2 ${
-                      sheetTestResult.success ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300' : 'bg-red-50 text-red-800 border border-red-200'
-                    }`}>
-                      {sheetTestResult.success ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div>
-                        <strong>{sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:'}</strong>
-                        <p className="mt-0.5">{sheetTestResult.message || sheetTestResult.error}</p>
+                  {/* WhatsApp Family Routing Box */}
+                  <div className="p-5 rounded-2xl bg-[#F4F6F3] border border-[#C5A869]/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-emerald-600" />
+                        <strong className="text-sm font-sans text-[#1E2F23]">
+                          WhatsApp Family Routing
+                        </strong>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        Strict Recipient Rules
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-gray-600 space-y-2">
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 flex justify-between items-center">
+                        <div>
+                          <strong className="block text-[#1E2F23]">Baluapuri Family</strong>
+                          <span className="text-[10px] text-gray-500">Groom's Side RSVP Alert</span>
+                        </div>
+                        <span className="font-mono text-xs font-semibold text-[#354F3B]">
+                          +91 9425006278
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 flex justify-between items-center">
+                        <div>
+                          <strong className="block text-[#1E2F23]">Kushwah Family</strong>
+                          <span className="text-[10px] text-gray-500">Bride's Side RSVP Alert</span>
+                        </div>
+                        <span className="font-mono text-xs font-semibold text-[#354F3B]">
+                          +91 8319433078
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <strong className="text-[#1E2F23]">Friends &amp; Colleagues Recipient</strong>
+                          <span className="text-[10px] text-gray-500">Configurable</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={friendsRecipient}
+                            onChange={(e) => setFriendsRecipient(e.target.value)}
+                            placeholder="+91 9425006278"
+                            className="flex-1 px-2.5 py-1 rounded-lg border border-gray-300 text-xs font-mono"
+                          />
+                          <button
+                            onClick={() => handleSaveFriendsRecipient(friendsRecipient)}
+                            className="px-2.5 py-1 rounded-lg bg-[#354F3B] text-white text-[11px] font-semibold"
+                          >
+                            Save
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Google Sheet Script Box */}
@@ -664,7 +1287,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                       <strong className="text-xs font-sans text-gray-800">
-                        Google Apps Script Webhook (Code.gs)
+                        Production Google Apps Script (Code.gs • 14 Columns &amp; Drive Folder)
                       </strong>
                     </div>
 
@@ -673,10 +1296,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                       className="inline-flex items-center gap-1 text-xs text-[#354F3B] font-semibold hover:text-[#C5A869]"
                     >
                       {copiedCode === 'gas' ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedCode === 'gas' ? 'Copied Script!' : 'Copy Code'}</span>
+                      <span>{copiedCode === 'gas' ? 'Copied Code.gs!' : 'Copy Code.gs'}</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-56">
+                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-56 leading-relaxed">
                     {GOOGLE_SCRIPT_CODE}
                   </pre>
                 </div>
@@ -687,7 +1310,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                     <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-emerald-600" />
                       <strong className="text-xs font-sans text-gray-800">
-                        Supabase PostgreSQL Schema
+                        Primary Supabase Database Schema (with RSVP ID &amp; Telemetry)
                       </strong>
                     </div>
 
@@ -699,7 +1322,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wedding_rsvps;`;
                       <span>{copiedCode === 'sql' ? 'Copied SQL!' : 'Copy SQL'}</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-48">
+                  <pre className="p-3 rounded-xl bg-gray-900 text-gray-200 text-[11px] font-mono overflow-x-auto max-h-48 leading-relaxed">
                     {SUPABASE_SQL_CODE}
                   </pre>
                 </div>

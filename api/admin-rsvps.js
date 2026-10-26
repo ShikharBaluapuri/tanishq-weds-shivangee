@@ -1,4 +1,4 @@
-// Vercel Serverless Function: Protected Host Admin RSVP Endpoint
+// Vercel Serverless Function: Protected Host Admin RSVP & Integrations Telemetry Endpoint
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -10,7 +10,6 @@ function verifySession(req) {
   if (authHeader.startsWith('Bearer ')) {
     token = authHeader.slice(7).trim();
   } else {
-    // Parse cookies
     const cookieHeader = req.headers.cookie || '';
     const match = cookieHeader.match(/host_session=([^;]+)/);
     if (match) {
@@ -76,13 +75,73 @@ export default async function handler(req, res) {
   }
 
   const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
+  const metaToken = process.env.WHATSAPP_API_TOKEN || '';
+  const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  const communityUrl = process.env.WHATSAPP_COMMUNITY_URL || process.env.VITE_WHATSAPP_COMMUNITY_URL || '';
+
+  // Calculate detailed integration metrics
+  const totalRsvps = rsvps.length;
+  const attendingRsvps = rsvps.filter(r => r.attending === 'Joyfully Attending');
+  const declinedRsvps = rsvps.filter(r => r.attending === 'Regretfully Declining');
+  const totalHeadcount = attendingRsvps.reduce((sum, r) => sum + (Number(r.guest_count) || 1), 0);
+
+  const baluapuriList = rsvps.filter(r => (r.side || '').toLowerCase().includes('baluapuri'));
+  const kushwahList = rsvps.filter(r => (r.side || '').toLowerCase().includes('kushwah') || (r.side || '').toLowerCase().includes('verma'));
+  const friendsList = rsvps.filter(r => !baluapuriList.includes(r) && !kushwahList.includes(r));
+
+  const sheetsSynced = rsvps.filter(r => r.sheets_sync_status === 'synced').length;
+  const sheetsPending = rsvps.filter(r => r.sheets_sync_status !== 'synced').length;
+
+  const whatsappSent = rsvps.filter(r => r.whatsapp_notify_status === 'sent').length;
+  const whatsappPendingManual = rsvps.filter(r => r.whatsapp_notify_status === 'pending_manual_dispatch').length;
+  const whatsappFailed = rsvps.filter(r => r.whatsapp_notify_status === 'failed').length;
+
+  const communityOptedIn = rsvps.filter(r => r.community_consent).length;
+  const communityOptedOut = totalRsvps - communityOptedIn;
 
   return res.status(200).json({
     success: true,
     rsvps,
+    telemetry: {
+      totalRsvps,
+      attendingCount: attendingRsvps.length,
+      declinedCount: declinedRsvps.length,
+      totalHeadcount,
+      families: {
+        baluapuri: {
+          rsvps: baluapuriList.length,
+          headcount: baluapuriList.filter(r => r.attending === 'Joyfully Attending').reduce((sum, r) => sum + (Number(r.guest_count) || 1), 0),
+          recipient: '+91 9425006278'
+        },
+        kushwah: {
+          rsvps: kushwahList.length,
+          headcount: kushwahList.filter(r => r.attending === 'Joyfully Attending').reduce((sum, r) => sum + (Number(r.guest_count) || 1), 0),
+          recipient: '+91 8319433078'
+        },
+        friends: {
+          rsvps: friendsList.length,
+          headcount: friendsList.filter(r => r.attending === 'Joyfully Attending').reduce((sum, r) => sum + (Number(r.guest_count) || 1), 0),
+          recipient: process.env.WHATSAPP_FRIENDS_RECIPIENT || '+91 9425006278'
+        }
+      },
+      sync: {
+        sheetsSynced,
+        sheetsPending,
+        whatsappSent,
+        whatsappPendingManual,
+        whatsappFailed,
+        communityOptedIn,
+        communityOptedOut
+      }
+    },
     status: {
       googleSheetsConfigured: Boolean(webhookUrl && webhookUrl.startsWith('https://')),
-      supabaseConfigured: Boolean(supabaseUrl && supabaseKey)
+      supabaseConfigured: Boolean(supabaseUrl && supabaseKey),
+      whatsappAutomatedConfigured: Boolean(metaToken && metaPhoneId),
+      whatsappCommunityConfigured: Boolean(communityUrl),
+      whatsappCommunityUrl: communityUrl,
+      spreadsheetName: 'Tanishq & Shivangee — Wedding RSVP 2027',
+      driveFolderName: 'Tanishq & Shivangee — Wedding RSVP'
     }
   });
 }
