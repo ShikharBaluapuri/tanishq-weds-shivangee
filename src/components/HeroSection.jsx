@@ -121,7 +121,7 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
             animate={{ opacity: 1 }}
             transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
             style={{ fontFamily: "'Pinyon Script', 'Great Vibes', cursive" }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] text-[#343F35] font-normal leading-tight py-1 drop-shadow-sm whitespace-nowrap tracking-wide inline-flex items-center justify-center"
+            className="text-4xl sm:text-6xl md:text-7xl lg:text-[4.75rem] text-[#343F35] font-normal leading-tight py-1 drop-shadow-sm whitespace-nowrap tracking-wide inline-flex items-center justify-center"
           >
             <motion.span
               initial={{ opacity: 0, y: 12 }}
@@ -134,7 +134,7 @@ export default function HeroSection({ onOpenRsvp, onScrollToItinerary }) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
-              className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl text-[#C3A56B] mx-1 sm:mx-2.5 font-light"
+              className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-[#C3A56B] mx-1 sm:mx-3 font-light"
             >
               &amp;
             </motion.span>

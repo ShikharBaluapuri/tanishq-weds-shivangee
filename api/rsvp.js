@@ -252,7 +252,7 @@ export default async function handler(req, res) {
   let whatsappError = null;
 
   // 2. Synchronize to Google Sheets
-  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+  const webhookUrl = body?.webhookUrl || process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
   if (webhookUrl && webhookUrl.startsWith('https://')) {
     try {
       const controller = new AbortController();

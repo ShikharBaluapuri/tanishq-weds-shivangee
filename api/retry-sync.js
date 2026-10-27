@@ -81,7 +81,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+  const webhookUrl = body?.webhookUrl || process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
   const metaToken = process.env.WHATSAPP_API_TOKEN;
   const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 

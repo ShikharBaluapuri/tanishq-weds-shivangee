@@ -86,9 +86,16 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   const [copiedId, setCopiedId] = useState('');
 
   // Diagnostic test state for Google Sheets
-  const [customWebhookInput, setCustomWebhookInput] = useState('');
+  const [customWebhookInput, setCustomWebhookInput] = useState(() => {
+    return localStorage.getItem('wedding_sheets_webhook_url') || import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
+  });
   const [isTestingSheet, setIsTestingSheet] = useState(false);
   const [sheetTestResult, setSheetTestResult] = useState(null);
+
+  const handleSaveWebhookUrl = (val) => {
+    setCustomWebhookInput(val);
+    localStorage.setItem('wedding_sheets_webhook_url', val.trim());
+  };
 
   // Retry state
   const [retryingId, setRetryingId] = useState(null);
@@ -162,7 +169,11 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setRetryingId(rsvpId);
     setRetryNotification(null);
     try {
-      const res = await retryRsvpSync({ rsvp_id: rsvpId, action });
+      const res = await retryRsvpSync({ 
+        rsvp_id: rsvpId, 
+        action, 
+        webhookUrl: customWebhookInput.trim() || undefined 
+      });
       if (res.success) {
         setRetryNotification({ type: 'success', text: `Sync retry succeeded for RSVP ${rsvpId}` });
         await loadData();
@@ -180,7 +191,10 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setIsRetryingAll(true);
     setRetryNotification(null);
     try {
-      const res = await retryRsvpSync({ action });
+      const res = await retryRsvpSync({ 
+        action, 
+        webhookUrl: customWebhookInput.trim() || undefined 
+      });
       if (res.success) {
         setRetryNotification({ 
           type: 'success', 
@@ -1192,6 +1206,28 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                           </a>
                         )}
                       </div>
+                    </div>
+
+                    {/* Apps Script Webhook URL Input */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-sans font-bold text-gray-500 uppercase block">
+                          Apps Script Webhook URL (ends in /exec)
+                        </label>
+                        {customWebhookInput && (
+                          <span className="text-[10px] text-emerald-700 font-medium">Configured locally</span>
+                        )}
+                      </div>
+                      <input
+                        type="url"
+                        value={customWebhookInput}
+                        onChange={(e) => handleSaveWebhookUrl(e.target.value)}
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        className="w-full px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-mono bg-white focus:outline-none focus:border-[#354F3B]"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Paste the Web App URL from Apps Script deployment, then click &ldquo;Test Sheet Webhook&rdquo; below.
+                      </p>
                     </div>
 
                     {/* Test Sheet Button */}

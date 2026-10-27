@@ -67,28 +67,28 @@ export default function WaxSealPreloader({ onOpenInvitation, initialOpen = false
           </div>
 
           {/* 1. TOP TYPOGRAPHY GROUP (Culturally authentic & editorial) */}
-          <div className="relative z-10 pt-1 sm:pt-2 text-center max-w-2xl mx-auto flex flex-col items-center flex-shrink-0">
+          <div className="relative z-10 pt-1.5 sm:pt-2.5 text-center max-w-4xl mx-auto flex flex-col items-center flex-shrink-0">
             
             {/* Sacred Hindi Invocation in Pure Devanagari */}
-            <div className="flex items-center justify-center gap-2 mb-0.5 sm:mb-1">
-              <span className="w-5 sm:w-8 h-[1px] bg-gradient-to-r from-transparent to-[#C3A56B]/70" />
-              <h2 className="font-devanagari text-xs sm:text-sm font-normal text-[#C3A56B] tracking-normal leading-relaxed drop-shadow-sm">
+            <div className="flex items-center justify-center gap-2.5 mb-1 sm:mb-1.5">
+              <span className="w-6 sm:w-10 h-[1px] bg-gradient-to-r from-transparent to-[#C3A56B]/70" />
+              <h2 className="font-devanagari text-xs sm:text-base md:text-lg font-normal text-[#C3A56B] tracking-normal leading-relaxed drop-shadow-sm">
                 ॥ श्री गणेशाय नमः ॥
               </h2>
-              <span className="w-5 sm:w-8 h-[1px] bg-gradient-to-l from-transparent to-[#C3A56B]/70" />
+              <span className="w-6 sm:w-10 h-[1px] bg-gradient-to-l from-transparent to-[#C3A56B]/70" />
             </div>
 
             {/* Editorial Eyebrow Subtitle */}
-            <p className="font-cormorant uppercase text-[9px] sm:text-[11px] tracking-[0.3em] text-[#F5F0E5]/80 font-normal">
+            <p className="font-cormorant uppercase text-[10px] sm:text-xs md:text-sm tracking-[0.35em] text-[#F5F0E5]/85 font-medium mb-0.5 sm:mb-1">
               A Love Story Begins
             </p>
 
-            {/* Romantic Calligraphic Couple Names - One Single Horizontal Line */}
+            {/* Romantic Calligraphic Couple Names - Made noticeably larger, grander & luxurious */}
             <h1
               style={{ fontFamily: "'Pinyon Script', 'Great Vibes', cursive" }}
-              className="text-2xl sm:text-4xl md:text-5xl lg:text-[3.75rem] text-[#F5F0E5] font-normal leading-tight drop-shadow-md py-0.5 whitespace-nowrap tracking-wide"
+              className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.75rem] xl:text-[5.5rem] text-[#F5F0E5] font-normal leading-none drop-shadow-lg py-1 whitespace-nowrap tracking-wide"
             >
-              Tanishq <span className="font-cormorant italic text-xl sm:text-2xl md:text-3xl text-[#C3A56B] mx-1 sm:mx-2 font-light">&amp;</span> Shivangee
+              Tanishq <span className="font-cormorant italic text-2xl sm:text-3xl md:text-4xl lg:text-[3.5rem] text-[#C3A56B] mx-1.5 sm:mx-3 font-light">&amp;</span> Shivangee
             </h1>
           </div>
 
@@ -135,7 +135,7 @@ export default function WaxSealPreloader({ onOpenInvitation, initialOpen = false
                   
                   <span
                     style={{ fontFamily: "'Pinyon Script', cursive" }}
-                    className="text-xl sm:text-2xl md:text-3xl text-[#343F35] block"
+                    className="text-2xl sm:text-3xl md:text-4xl text-[#343F35] block"
                   >
                     Tanishq &amp; Shivangee
                   </span>

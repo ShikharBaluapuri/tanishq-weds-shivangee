@@ -187,8 +187,9 @@ export async function fetchProtectedAdminRsvps() {
 /**
  * Trigger authorized manual retry for Google Sheets sync or WhatsApp notification
  */
-export async function retryRsvpSync({ rsvp_id = null, action = 'all' } = {}) {
+export async function retryRsvpSync({ rsvp_id = null, action = 'all', webhookUrl = null } = {}) {
   const token = sessionStorage.getItem('host_session_token') || '';
+  const targetWebhook = webhookUrl || (typeof window !== 'undefined' ? localStorage.getItem('wedding_sheets_webhook_url') : '') || googleSheetsWebhookUrl;
 
   try {
     const res = await fetch('/api/retry-sync', {
@@ -197,7 +198,7 @@ export async function retryRsvpSync({ rsvp_id = null, action = 'all' } = {}) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ rsvp_id, action })
+      body: JSON.stringify({ rsvp_id, action, webhookUrl: targetWebhook })
     });
 
     const data = await res.json();
@@ -307,7 +308,8 @@ export async function submitRsvp(formData) {
       ? (validated.community_consent ? 'invitation_available' : 'declined')
       : (validated.community_consent ? 'invitation_available' : 'not_consented'),
     sheets_sync_status: 'pending',
-    whatsapp_notify_status: 'pending_manual_dispatch'
+    whatsapp_notify_status: 'pending_manual_dispatch',
+    webhookUrl: (typeof window !== 'undefined' ? localStorage.getItem('wedding_sheets_webhook_url') : '') || googleSheetsWebhookUrl || undefined
   };
 
   let serverSynced = false;
