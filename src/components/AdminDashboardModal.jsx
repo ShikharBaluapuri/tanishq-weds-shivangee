@@ -1262,6 +1262,17 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                         <div>
                           <strong>{sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:'}</strong>
                           <p className="mt-0.5">{sheetTestResult.message || sheetTestResult.error}</p>
+                          {(sheetTestResult.error?.includes('401') || sheetTestResult.status === 401) && (
+                            <div className="mt-2.5 p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed space-y-1">
+                              <p className="font-bold text-amber-950">💡 How to fix &ldquo;Status 401&rdquo; in 30 seconds:</p>
+                              <ol className="list-decimal list-inside space-y-0.5 text-amber-900">
+                                <li>In Google Apps Script, click <strong>Deploy</strong> (top right) &gt; <strong>Manage deployments</strong>.</li>
+                                <li>Click the <strong>Edit (pencil)</strong> icon next to your Web app deployment.</li>
+                                <li>Under <strong>Who has access</strong>, change from <em>&ldquo;Only myself&rdquo;</em> to <strong>&ldquo;Anyone&rdquo;</strong>.</li>
+                                <li>Under <strong>Version</strong>, select <strong>New version</strong>, then click <strong>Deploy</strong>.</li>
+                              </ol>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

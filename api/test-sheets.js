@@ -70,9 +70,14 @@ export default async function handler(req, res) {
         response: data
       });
     } else {
-      return res.status(response.status).json({
+      let errorMsg = `Google Apps Script returned status ${response.status}`;
+      if (response.status === 401) {
+        errorMsg = 'Google Apps Script returned status 401 (Unauthorized): In Apps Script, click Deploy > Manage deployments > Edit (pencil) > set "Who has access" to "Anyone" (currently set to "Only myself"), select "New version", and click Deploy.';
+      }
+      return res.status(200).json({
         success: false,
-        error: `Google Apps Script returned status ${response.status}`,
+        error: errorMsg,
+        status: response.status,
         details: text
       });
     }
