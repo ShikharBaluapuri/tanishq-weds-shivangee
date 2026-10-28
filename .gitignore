@@ -12,6 +12,8 @@ extracted_assets/
 
 .vercel
 .data/
+tests/.generated/
 test_*.cjs
 verify_*.cjs
 scratch_*.cjs
+supabase/.temp/

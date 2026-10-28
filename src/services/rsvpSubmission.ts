@@ -15,6 +15,7 @@ export function validateRsvp(input: Record<string, unknown>): RsvpConfirmation &
   side: string;
   arrival_date: string;
   arrival_time: string;
+  arrival_mode: string;
   arrival_info: string;
   needs_accommodation: string;
   blessing_message: string;
@@ -73,6 +74,7 @@ export function validateRsvp(input: Record<string, unknown>): RsvpConfirmation &
     side: text('side', 100) || 'Friends & Colleagues',
     arrival_date,
     arrival_time,
+    arrival_mode: attending === 'Regretfully Declining' ? '' : text('arrival_mode', 100),
     arrival_info: text('arrival_info', 500) || `${arrival_date} ${arrival_time}`.trim(),
     needs_accommodation: text('needs_accommodation', 3) || 'No',
     blessing_message: text('blessing_message', 2000),

@@ -1,21 +1,23 @@
+import GOOGLE_SCRIPT_CODE from '../../google-apps-script/Code.gs?raw';
+import SUPABASE_SQL_CODE from '../../supabase/migrations/20261027_rsvp_outbox.sql?raw';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Lock, 
-  KeyRound, 
-  Users, 
-  CheckCircle, 
+import {
+  X,
+  Lock,
+  KeyRound,
+  Users,
+  CheckCircle,
   CheckCircle2,
-  XCircle, 
-  Search, 
-  Download, 
-  Copy, 
-  Check, 
-  Code2, 
-  Database, 
-  FileSpreadsheet, 
-  BarChart3, 
+  XCircle,
+  Search,
+  Download,
+  Copy,
+  Check,
+  Code2,
+  Database,
+  FileSpreadsheet,
+  BarChart3,
   Filter,
   RefreshCw,
   LoaderCircle,
@@ -31,18 +33,18 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react';
-import { 
-  getAllRsvps, 
-  calculateHeadcountMetrics, 
-  verifyHostPin, 
+import {
+  getAllRsvps,
+  calculateHeadcountMetrics,
+  verifyHostPin,
   fetchProtectedAdminRsvps,
   testGoogleSheetsConnection,
   retryRsvpSync
 } from '../services/rsvpService';
-import { 
-  FAMILY_RECIPIENTS, 
-  getFamilyRecipient, 
-  formatFamilyNotificationMessage 
+import {
+  FAMILY_RECIPIENTS,
+  getFamilyRecipient,
+  formatFamilyNotificationMessage
 } from '../lib/whatsapp';
 
 export default function AdminDashboardModal({ isOpen, onClose }) {
@@ -54,8 +56,8 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
 
   const [rsvps, setRsvps] = useState([]);
   const [telemetry, setTelemetry] = useState(null);
-  const [cloudStatus, setCloudStatus] = useState({ 
-    googleSheetsConfigured: false, 
+  const [cloudStatus, setCloudStatus] = useState({
+    googleSheetsConfigured: false,
     supabaseConfigured: false,
     whatsappAutomatedConfigured: false,
     whatsappCommunityConfigured: false,
@@ -86,16 +88,8 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   const [copiedId, setCopiedId] = useState('');
 
   // Diagnostic test state for Google Sheets
-  const [customWebhookInput, setCustomWebhookInput] = useState(() => {
-    return localStorage.getItem('wedding_sheets_webhook_url') || import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
-  });
   const [isTestingSheet, setIsTestingSheet] = useState(false);
   const [sheetTestResult, setSheetTestResult] = useState(null);
-
-  const handleSaveWebhookUrl = (val) => {
-    setCustomWebhookInput(val);
-    localStorage.setItem('wedding_sheets_webhook_url', val.trim());
-  };
 
   // Retry state
   const [retryingId, setRetryingId] = useState(null);
@@ -121,9 +115,10 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
           localStorage.setItem('wedding_community_url', response.status.whatsappCommunityUrl);
         }
       }
-    } catch {
-      const fallbackData = await getAllRsvps();
-      setRsvps(fallbackData || []);
+    } catch (error) {
+      setRsvps([]);
+      setCloudStatus(prev => ({ ...prev, googleSheetsConfigured: false }));
+      setRetryNotification({ type: 'error', text: error.message || 'Unable to load confirmed RSVPs.' });
     }
   };
 
@@ -156,7 +151,7 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setIsTestingSheet(true);
     setSheetTestResult(null);
     try {
-      const res = await testGoogleSheetsConnection(customWebhookInput.trim() || null);
+      const res = await testGoogleSheetsConnection();
       setSheetTestResult(res);
     } catch (err) {
       setSheetTestResult({ success: false, error: err.message });
@@ -169,10 +164,9 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setRetryingId(rsvpId);
     setRetryNotification(null);
     try {
-      const res = await retryRsvpSync({ 
-        rsvp_id: rsvpId, 
-        action, 
-        webhookUrl: customWebhookInput.trim() || undefined 
+      const res = await retryRsvpSync({
+        rsvp_id: rsvpId,
+        action
       });
       if (res.success) {
         setRetryNotification({ type: 'success', text: `Sync retry succeeded for RSVP ${rsvpId}` });
@@ -191,14 +185,13 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setIsRetryingAll(true);
     setRetryNotification(null);
     try {
-      const res = await retryRsvpSync({ 
-        action, 
-        webhookUrl: customWebhookInput.trim() || undefined 
+      const res = await retryRsvpSync({
+        action
       });
       if (res.success) {
-        setRetryNotification({ 
-          type: 'success', 
-          text: `Processed ${res.processedCount || 0} pending records successfully.` 
+        setRetryNotification({
+          type: 'success',
+          text: `Verified ${res.processedCount || 0} record(s). ${res.remainingCount || 0} pending; retry again to continue.`
         });
         await loadData();
       } else {
@@ -243,22 +236,22 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
 
   // Filter guests
   const filteredGuests = rsvps.filter((g) => {
-    const matchesSearch = 
+    const matchesSearch =
       (g.guest_name && g.guest_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (g.phone && g.phone.includes(searchQuery)) ||
       (g.rsvp_id && g.rsvp_id.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesSide = selectedSide === 'All' || 
-      g.side === selectedSide || 
+
+    const matchesSide = selectedSide === 'All' ||
+      g.side === selectedSide ||
       (selectedSide === 'Kushwah Family' && (g.side === 'Verma / Kushwah Family' || (g.side || '').toLowerCase().includes('kushwah')));
-    
+
     const matchesStatus = selectedStatus === 'All' || g.attending === selectedStatus;
 
-    const matchesSync = selectedSync === 'All' || 
+    const matchesSync = selectedSync === 'All' ||
       (selectedSync === 'synced' && g.sheets_sync_status === 'synced') ||
       (selectedSync === 'pending' && g.sheets_sync_status !== 'synced');
 
-    const matchesWhatsapp = selectedWhatsapp === 'All' || 
+    const matchesWhatsapp = selectedWhatsapp === 'All' ||
       g.whatsapp_notify_status === selectedWhatsapp ||
       (selectedWhatsapp === 'pending_manual_dispatch' && (!g.whatsapp_notify_status || g.whatsapp_notify_status === 'pending_manual_dispatch'));
 
@@ -334,145 +327,6 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
     setTimeout(() => setCopiedId(''), 2000);
   };
 
-  // Google Apps Script code matching google-apps-script/Code.gs
-  const GOOGLE_SCRIPT_CODE = `/**
- * TANISHQ & SHIVANGEE — OFFICIAL WEDDING RSVP AUTOMATION SCRIPT
- *
- * Target Spreadsheet:
- * URL: https://docs.google.com/spreadsheets/d/1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y/edit
- * ID:  1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y
- * Title: "T&S Wedding RSVPs"
- * Worksheet: "Sheet1"
- *
- * Exact 16 Columns (A to P):
- * A: RSVP ID  B: Submission Date  C: Submission Time  D: Guest / Family Name
- * E: WhatsApp Number  F: Guest Side  G: Attendance Status  H: Number of Guests
- * I: Selected Wedding Events  J: Expected Arrival Date  K: Expected Arrival Time
- * L: Blessing / Message  M: WhatsApp Consent  N: Notification Status
- * O: Google Sheets Sync Status  P: Last Updated
- */
-
-const SPREADSHEET_ID = '1AIrha5u8g9enc93FaoOTtyeTcsmzIkygLJaiObdYt-Y';
-const WORKSHEET_NAME = 'Sheet1';
-
-const HEADERS = [
-  'RSVP ID', 'Submission Date', 'Submission Time', 'Guest / Family Name',
-  'WhatsApp Number', 'Guest Side', 'Attendance Status', 'Number of Guests',
-  'Selected Wedding Events', 'Expected Arrival Date', 'Expected Arrival Time',
-  'Blessing / Message', 'WhatsApp Consent', 'Notification Status',
-  'Google Sheets Sync Status', 'Last Updated'
-];
-
-function sanitizeCell(val) {
-  if (val === null || val === undefined) return '';
-  const str = String(val).trim();
-  return /^[=+\\-@]/.test(str) ? "'" + str : str;
-}
-
-function getTargetSheet() {
-  let ss;
-  try {
-    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (err) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  }
-  let sheet = ss.getSheetByName(WORKSHEET_NAME) || ss.getSheets()[0];
-  if (sheet.getLastRow() === 0 || sheet.getRange(1, 1).getValue() === '') {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-    sheet.getRange(1, 1, 1, HEADERS.length)
-      .setBackground('#2C3E34')
-      .setFontColor('#FFFFFF')
-      .setFontWeight('bold');
-    sheet.setFrozenRows(1);
-    for (let c = 1; c <= HEADERS.length; c++) sheet.autoResizeColumn(c);
-  }
-  return sheet;
-}
-
-function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const sheet = getTargetSheet();
-    const data = sheet.getDataRange().getValues();
-
-    const rsvpId = sanitizeCell(payload.rsvp_id || 'RSVP-2027-' + Date.now().toString(36).toUpperCase());
-    const now = new Date();
-    const subDate = sanitizeCell(payload.submission_date || Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy'));
-    const subTime = sanitizeCell(payload.submission_time || Utilities.formatDate(now, 'Asia/Kolkata', 'hh:mm a') + ' IST');
-    const guestName = sanitizeCell(payload.guest_name);
-    const rawPhone = String(payload.phone || '').replace(/\\D/g, '');
-    const phone = "'" + rawPhone;
-    const side = sanitizeCell(payload.side || 'Friends & Colleagues');
-    const attending = sanitizeCell(payload.attending || 'Joyfully Attending');
-    const count = attending === 'Regretfully Declining' ? 0 : (Number(payload.guest_count) || 1);
-    const events = sanitizeCell(Array.isArray(payload.events_attending) ? payload.events_attending.join('; ') : payload.events_attending);
-    const arrDate = sanitizeCell(payload.arrival_date || '');
-    const arrTime = sanitizeCell(payload.arrival_time || '');
-    const blessing = sanitizeCell(payload.blessing_message || '');
-    const consent = sanitizeCell(payload.whatsapp_consent || (payload.community_consent ? 'Opted In' : 'Not Opted In'));
-    const notif = sanitizeCell(payload.notification_status || 'Pending Manual Dispatch');
-    const sync = 'Synced';
-    const lastUp = Utilities.formatDate(now, 'Asia/Kolkata', 'dd MMMM yyyy, hh:mm:ss a') + ' IST';
-
-    const rowValues = [
-      rsvpId, subDate, subTime, guestName, phone, side, attending, count,
-      events, arrDate, arrTime, blessing, consent, notif, sync, lastUp
-    ];
-
-    let rowIndex = -1;
-    for (let i = 1; i < data.length; i++) {
-      if ((rsvpId && String(data[i][0]).trim() === rsvpId) || (rawPhone && String(data[i][4]).replace(/\\D/g, '') === rawPhone)) {
-        rowIndex = i + 1;
-        break;
-      }
-    }
-
-    if (rowIndex > 0) {
-      if (data[rowIndex - 1][0]) rowValues[0] = data[rowIndex - 1][0];
-      if (data[rowIndex - 1][1]) rowValues[1] = data[rowIndex - 1][1];
-      if (data[rowIndex - 1][2]) rowValues[2] = data[rowIndex - 1][2];
-      sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
-    } else {
-      sheet.appendRow(rowValues);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ success: true, rsvp_id: rowValues[0] })).setMimeType(ContentService.MimeType.JSON);
-  } finally {
-    lock.releaseLock();
-  }
-}`;
-
-  const SUPABASE_SQL_CODE = `-- Official Schema for Tanishq & Shivangee RSVP Management
-CREATE TABLE IF NOT EXISTS public.wedding_rsvps (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  rsvp_id TEXT UNIQUE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  submitted_at TEXT NOT NULL,
-  guest_name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  side TEXT DEFAULT 'Friends & Colleagues',
-  attending TEXT DEFAULT 'Joyfully Attending',
-  guest_count INTEGER DEFAULT 1,
-  events_attending TEXT[] DEFAULT '{}',
-  arrival_date TEXT,
-  arrival_time TEXT,
-  arrival_info TEXT,
-  needs_accommodation TEXT DEFAULT 'No',
-  blessing_message TEXT,
-  community_consent BOOLEAN DEFAULT FALSE,
-  community_invite_status TEXT DEFAULT 'not_consented',
-  sheets_sync_status TEXT DEFAULT 'pending',
-  whatsapp_notify_status TEXT DEFAULT 'pending_manual_dispatch',
-  sheets_synced_at TIMESTAMPTZ,
-  whatsapp_sent_at TIMESTAMPTZ
-);
-
-ALTER TABLE public.wedding_rsvps ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public insert" ON public.wedding_rsvps FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);`;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <motion.div
@@ -514,8 +368,8 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
         {/* Notification Banner */}
         {retryNotification && (
           <div className={`px-6 py-2.5 text-xs font-sans flex items-center justify-between ${
-            retryNotification.type === 'success' 
-              ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200' 
+            retryNotification.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200'
               : 'bg-red-50 text-red-800 border-b border-red-200'
           }`}>
             <div className="flex items-center gap-2">
@@ -526,7 +380,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
               )}
               <span>{retryNotification.text}</span>
             </div>
-            <button 
+            <button
               onClick={() => setRetryNotification(null)}
               className="text-gray-400 hover:text-gray-700"
             >
@@ -546,34 +400,32 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
               Host Security Verification
             </h4>
             <p className="text-xs text-[#7A917F] mb-6 font-sans">
-              Enter the authorized family host PIN to access protected guest phone numbers, Google Sheets synchronization, and WhatsApp automation controls.
+              Enter the authorized family host passphrase to access protected guest phone numbers, Google Sheets synchronization, and WhatsApp automation controls.
             </p>
 
             <form onSubmit={handlePinSubmit} className="space-y-4">
               <input
                 type="password"
-                maxLength={4}
-                inputMode="numeric"
-                pattern="[0-9]*"
+                maxLength={128}
                 value={pinInput}
                 onChange={(e) => {
                   setPinError(false);
-                  setPinInput(e.target.value.replace(/\D/g, ''));
+                  setPinInput(e.target.value);
                 }}
-                placeholder="••••"
+                placeholder="Host passphrase"
                 className="w-full text-center text-3xl tracking-[0.6em] py-3 rounded-2xl border border-[#C5A869]/40 focus:outline-none focus:ring-2 focus:ring-[#354F3B] font-mono bg-[#F4F6F3]/50"
                 autoFocus
               />
 
               {pinError && (
                 <p className="text-xs text-red-600 font-sans">
-                  Incorrect security PIN. Please try again.
+                  Incorrect host passphrase. Please try again.
                 </p>
               )}
 
               <button
                 type="submit"
-                disabled={isVerifying || pinInput.length !== 4}
+                disabled={isVerifying || pinInput.length < 8}
                 className="w-full py-2.5 rounded-full bg-[#354F3B] text-[#E8E4D8] font-cormorant uppercase tracking-[0.2em] text-xs font-semibold hover:bg-[#2A3F2F] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
                 {isVerifying && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
@@ -1142,7 +994,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                     Live Google Workspace, Drive &amp; WhatsApp Automations
                   </h4>
                   <p className="text-xs text-[#7A917F] font-sans leading-relaxed">
-                    Every successful RSVP is validated, secured against formula injection, and synced to your authorized Google Spreadsheet inside Google Drive. Family WhatsApp alerts are routed according to affiliation.
+                    RSVPs are validated and saved through the server. The connection check verifies access to your spreadsheet; pending records can be retried from durable storage.
                   </p>
                 </div>
 
@@ -1158,7 +1010,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                         </strong>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        16 Production Columns (A to P)
+                        17 Production Columns (A to Q)
                       </span>
                     </div>
 
@@ -1208,27 +1060,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                       </div>
                     </div>
 
-                    {/* Apps Script Webhook URL Input */}
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-sans font-bold text-gray-500 uppercase block">
-                          Apps Script Webhook URL (ends in /exec)
-                        </label>
-                        {customWebhookInput && (
-                          <span className="text-[10px] text-emerald-700 font-medium">Configured locally</span>
-                        )}
-                      </div>
-                      <input
-                        type="url"
-                        value={customWebhookInput}
-                        onChange={(e) => handleSaveWebhookUrl(e.target.value)}
-                        placeholder="https://script.google.com/macros/s/.../exec"
-                        className="w-full px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-mono bg-white focus:outline-none focus:border-[#354F3B]"
-                      />
-                      <p className="text-[10px] text-gray-500 mt-1">
-                        Paste the Web App URL from Apps Script deployment, then click &ldquo;Test Sheet Webhook&rdquo; below.
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500">The Sheets connection is configured securely in Vercel. This check reads the production sheet without adding a test RSVP.</p>
 
                     {/* Test Sheet Button */}
                     <div className="flex items-center justify-between pt-1">
@@ -1238,7 +1070,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                         className="px-3 py-1.5 rounded-xl bg-white border border-[#C5A869]/40 text-[#354F3B] text-xs font-semibold hover:bg-gray-50 transition-all flex items-center gap-1"
                       >
                         {isTestingSheet ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        <span>{isTestingSheet ? 'Testing Handshake...' : 'Test Sheet Webhook'}</span>
+                        <span>{isTestingSheet ? 'Testing Handshake...' : 'Check Sheets Connection'}</span>
                       </button>
 
                       <button
@@ -1246,7 +1078,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                         disabled={isRetryingAll}
                         className="px-3 py-1.5 rounded-xl bg-[#354F3B] text-white text-xs font-medium hover:bg-[#2A3F2F]"
                       >
-                        Sync All Pending
+                        Retry Next Pending
                       </button>
                     </div>
 
@@ -1260,7 +1092,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                           <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                         )}
                         <div>
-                          <strong>{sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:'}</strong>
+                          <strong>{sheetTestResult.status || (sheetTestResult.success ? 'Connection Confirmed!' : 'Connection Status:')}</strong>
                           <p className="mt-0.5">{sheetTestResult.message || sheetTestResult.error}</p>
                           {(sheetTestResult.error?.includes('401') || sheetTestResult.status === 401) && (
                             <div className="mt-2.5 p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed space-y-1">
@@ -1344,7 +1176,7 @@ CREATE POLICY "Allow host read" ON public.wedding_rsvps FOR SELECT USING (true);
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                       <strong className="text-xs font-sans text-gray-800">
-                        Production Google Apps Script (Code.gs • 14 Columns &amp; Drive Folder)
+                        Production Google Apps Script (signed requests, 17 columns)
                       </strong>
                     </div>
 

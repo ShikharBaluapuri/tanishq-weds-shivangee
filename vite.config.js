@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Vite plugin to run serverless API functions locally during development
@@ -12,7 +12,7 @@ function apiDevMiddleware() {
         const urlPath = req.url.split('?')[0];
         const apiName = urlPath.replace('/api/', '');
 
-        const validApis = ['verify-pin', 'rsvp', 'admin-rsvps', 'test-sheets', 'retry-sync'];
+        const validApis = ['verify-pin', 'rsvp', 'admin-rsvps', 'test-sheets', 'retry-sync', 'sync-rsvps', 'admin-update-rsvp'];
         if (!validApis.includes(apiName)) return next();
 
         try {
@@ -24,7 +24,7 @@ function apiDevMiddleware() {
 
           if (handlerModule && handlerModule.default) {
             let body = '';
-            req.on('data', chunk => { body += chunk; });
+            req.on('data', chunk => { body += chunk; if (body.length > 16384) req.destroy(); });
             req.on('end', async () => {
               try {
                 req.body = body ? JSON.parse(body) : {};
@@ -42,7 +42,8 @@ function apiDevMiddleware() {
                 return res;
               };
 
-              await handlerModule.default(req, res);
+              try { await handlerModule.default(req, res); }
+              catch { if (!res.writableEnded) res.status(500).json({ success: false, error: 'Server error.' }); }
             });
             return;
           }
@@ -61,11 +62,15 @@ function apiDevMiddleware() {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = mode === 'test' ? {} : loadEnv(mode, process.cwd(), '');
+  for (const [key, value] of Object.entries(env)) if (process.env[key] === undefined) process.env[key] = value;
+  return {
   base: './',
   plugins: [react(), apiDevMiddleware()],
   server: {
     port: 3000,
-    host: true
+    host: '127.0.0.1'
   }
+};
 })

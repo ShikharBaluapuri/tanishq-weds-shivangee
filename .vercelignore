@@ -1,0 +1,8 @@
+.data
+tests
+chrome_temp
+edge_temp
+extracted_assets
+*.pdf
+.env.local
+.env.*.local

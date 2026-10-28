@@ -85,9 +85,6 @@ export default function App() {
           onScrollToItinerary={handleScrollToItinerary}
         />
 
-        {/* Sacred Shiv–Shakti Divine Union Section */}
-        <ShivShaktiSection />
-
         {/* Dynamic Theme-Shifting Itinerary */}
         <ItinerarySection />
 
@@ -96,6 +93,9 @@ export default function App() {
 
         {/* Real-time Wall of Blessings */}
         <WallOfBlessings onOpenBlessingModal={() => setIsRsvpOpen(true)} />
+
+        {/* Sacred Shiv–Shakti Divine Union Section (Final content section before footer) */}
+        <ShivShaktiSection />
 
         {/* Family Credits & Quick Contacts */}
         <RollOfHonor onOpenAdminModal={() => setIsAdminOpen(true)} />

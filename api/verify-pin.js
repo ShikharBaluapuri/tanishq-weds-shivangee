@@ -1,33 +1,7 @@
 // Vercel Serverless Function: Secure Host PIN Verification
 import crypto from 'crypto';
 
-// Rate limiting in-memory store (per IP)
-const attempts = new Map();
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  const record = attempts.get(ip);
-  if (!record) return false;
-
-  // Clear if older than 15 minutes
-  if (now - record.firstAttempt > 15 * 60 * 1000) {
-    attempts.delete(ip);
-    return false;
-  }
-
-  return record.count >= 6;
-}
-
-function recordFailedAttempt(ip) {
-  const now = Date.now();
-  const record = attempts.get(ip) || { count: 0, firstAttempt: now };
-  record.count += 1;
-  attempts.set(ip, record);
-}
-
-function clearAttempts(ip) {
-  attempts.delete(ip);
-}
+import { rateLimit, sameOrigin } from '../server/request-controls.js';
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -35,14 +9,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-
-  if (isRateLimited(clientIp)) {
-    return res.status(429).json({
-      success: false,
-      error: 'Too many failed verification attempts. Please wait 15 minutes before trying again.'
-    });
-  }
+  res.setHeader('Cache-Control','no-store');
+  if (!sameOrigin(req)) return res.status(403).json({success:false});
 
   let body = req.body;
   if (typeof body === 'string') {
@@ -54,7 +22,13 @@ export default async function handler(req, res) {
   }
 
   const submittedPin = (body?.pin || '').toString().trim();
-  const expectedPin = (process.env.HOST_DASHBOARD_PIN || process.env.ADMIN_PIN || '7899').toString().trim();
+  const expectedPin = (process.env.HOST_DASHBOARD_PIN || process.env.ADMIN_PIN || '').toString().trim();
+
+  if (expectedPin.length < 8 || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) return res.status(503).json({ success: false, error: 'Host authentication configuration missing.' });
+
+  try {
+    if (!await rateLimit(req,'host-login',null,6,900)) return res.status(429).json({success:false,error:'Too many login attempts. Please wait 15 minutes.'});
+  } catch { return res.status(503).json({success:false,error:'Host authentication unavailable.'}); }
 
   // Timing safe comparison using SHA-256 hashes
   const submittedHash = crypto.createHash('sha256').update(submittedPin).digest();
@@ -63,7 +37,6 @@ export default async function handler(req, res) {
   const isMatch = crypto.timingSafeEqual(submittedHash, expectedHash);
 
   if (!isMatch) {
-    recordFailedAttempt(clientIp);
     return res.status(401).json({
       success: false,
       error: 'Incorrect PIN. Please check with the family hosts.'
@@ -71,10 +44,9 @@ export default async function handler(req, res) {
   }
 
   // Clear failed attempts upon successful verification
-  clearAttempts(clientIp);
 
   // Generate cryptographic HMAC session token
-  const secret = process.env.SESSION_SECRET || 'wedding-tanishq-shivangee-secure-salt-2027';
+  const secret = process.env.SESSION_SECRET;
   const timestamp = Date.now().toString();
   const hmac = crypto.createHmac('sha256', secret).update(timestamp).digest('hex');
   const sessionToken = `${timestamp}.${hmac}`;

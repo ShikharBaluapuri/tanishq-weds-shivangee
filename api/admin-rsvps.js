@@ -1,84 +1,24 @@
-// Vercel Serverless Function: Protected Host Admin RSVP & Integrations Telemetry Endpoint
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-
-function verifySession(req) {
-  const authHeader = req.headers.authorization || '';
-  let token = '';
-
-  if (authHeader.startsWith('Bearer ')) {
-    token = authHeader.slice(7).trim();
-  } else {
-    const cookieHeader = req.headers.cookie || '';
-    const match = cookieHeader.match(/host_session=([^;]+)/);
-    if (match) {
-      token = match[1];
-    }
-  }
-
-  if (!token || !token.includes('.')) return false;
-
-  const [timestamp, hmac] = token.split('.');
-  const time = Number(timestamp);
-  if (!time || isNaN(time)) return false;
-
-  // Session expiry: 24 hours
-  if (Date.now() - time > 24 * 60 * 60 * 1000) return false;
-
-  const secret = process.env.SESSION_SECRET || 'wedding-tanishq-shivangee-secure-salt-2027';
-  const expectedHmac = crypto.createHmac('sha256', secret).update(timestamp).digest('hex');
-
-  return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac));
-}
-
-const DATA_FILE = path.join(process.cwd(), '.data', 'rsvps.json');
+import { verifySession } from '../server/auth.js';
+import { sheetsRequest, SPREADSHEET_ID, WORKSHEET } from '../server/sheets.js';
+import { databaseConfigured, listPrimaryRecords } from '../server/store.js';
 
 export default async function handler(req, res) {
-  // Check authorization
-  if (!verifySession(req)) {
-    return res.status(401).json({
-      error: 'Unauthorized: Valid family host session required to access protected guest data.'
-    });
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'GET') return res.status(405).json({ success: false });
+  if (!verifySession(req)) return res.status(401).json({ error: 'Host authentication required.' });
+  let rsvps = [], connected = false, connectionStatus = 'Synchronization Failed', durable = false;
+  try {
+    durable = databaseConfigured();
+    if (!durable) return res.status(503).json({success:false,error:'Database Configuration Missing'});
+    rsvps = await listPrimaryRecords();
+    await sheetsRequest('health');
+    connected = true;
+    connectionStatus = rsvps.some(r => r.sheets_sync_status !== 'synced') ? 'Synchronization Pending' : 'Connected';
+  } catch (error) {
+    connectionStatus = error.code || 'Synchronization Failed';
+    if (!durable || connectionStatus === 'Database Unavailable') return res.status(503).json({ success: false, error: connectionStatus });
   }
-
-  // If Supabase is configured, fetch live cloud records
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-  let rsvps = [];
-
-  if (supabaseUrl && supabaseKey) {
-    try {
-      const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/wedding_rsvps?select=*&order=created_at.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      if (response.ok) {
-        rsvps = await response.json();
-      }
-    } catch (e) {
-      console.warn('Supabase fetch failed in admin endpoint:', e.message);
-    }
-  }
-
-  // Fallback to local server cache
-  if (rsvps.length === 0 && fs.existsSync(DATA_FILE)) {
-    try {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      rsvps = raw ? JSON.parse(raw) : [];
-    } catch {
-      rsvps = [];
-    }
-  }
-
-  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
-  const metaToken = process.env.WHATSAPP_API_TOKEN || '';
-  const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
   const communityUrl = process.env.WHATSAPP_COMMUNITY_URL || process.env.VITE_WHATSAPP_COMMUNITY_URL || '';
-
   // Calculate detailed integration metrics
   const totalRsvps = rsvps.length;
   const attendingRsvps = rsvps.filter(r => r.attending === 'Joyfully Attending');
@@ -135,9 +75,10 @@ export default async function handler(req, res) {
       }
     },
     status: {
-      googleSheetsConfigured: Boolean(webhookUrl && webhookUrl.startsWith('https://')),
-      supabaseConfigured: Boolean(supabaseUrl && supabaseKey),
-      whatsappAutomatedConfigured: Boolean(metaToken && metaPhoneId),
+      googleSheetsConfigured: connected,
+      connectionStatus,
+      supabaseConfigured: durable,
+      whatsappAutomatedConfigured: false,
       whatsappCommunityConfigured: Boolean(communityUrl),
       whatsappCommunityUrl: communityUrl,
       spreadsheetName: 'T&S Wedding RSVPs',

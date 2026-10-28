@@ -317,34 +317,9 @@ function WeddingTimePicker({ value, onChange }) {
 }
 
 export default function RsvpModal({ isOpen, onClose }) {
-  const [step, setStep] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const s = parseInt(new URLSearchParams(window.location.search).get('step') || '1', 10);
-      return (s >= 1 && s <= 4) ? s : 1;
-    }
-    return 1;
-  });
+  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedData, setSubmittedData] = useState(() => {
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('step') === '4') {
-      return {
-        guest_name: 'Dr. Rajesh Sharma & Family',
-        phone: '9876543210',
-        side: 'Baluapuri Family',
-        attending: 'Joyfully Attending',
-        guest_count: 2,
-        events_attending: [
-          'Ganesh Poojan & Mamera (14th Feb, 9 AM)',
-          'Rangrez Haldi Carnival (14th Feb, 12 PM)',
-          'Sham-e-Sangeet & Ring Ceremony (14th Feb, 6 PM)',
-          'Barat, Varmala & Sajan Goth Lunch (15th Feb, 9 AM)'
-        ],
-        arrival_date: '14 February 2027',
-        blessing_message: 'May your sacred bond be blessed with boundless love and eternal joy!'
-      };
-    }
-    return null;
-  });
+  const [submittedData, setSubmittedData] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
 
   const [formData, setFormData] = useState({
@@ -465,7 +440,7 @@ export default function RsvpModal({ isOpen, onClose }) {
       ...formData,
       guest_count: formData.attending === 'Regretfully Declining' ? 0 : formData.guest_count,
       events_attending: formData.attending === 'Regretfully Declining' ? [] : formData.events_attending,
-      arrival_date: formattedArrival,
+      arrival_date: formData.attending === 'Regretfully Declining' ? 'Not Attending' : formData.arrival_date,
       arrival_info: formData.attending === 'Regretfully Declining' ? 'Regretfully Declining' : `${formData.arrival_mode} - ${formattedArrival}`,
       needs_accommodation: 'No',
       dietary_notes: '',
@@ -495,7 +470,7 @@ export default function RsvpModal({ isOpen, onClose }) {
     }
   };
 
-  const COMMUNITY_INVITE_URL = import.meta.env.VITE_WHATSAPP_COMMUNITY_URL || 'https://chat.whatsapp.com/invite/tanishq-shivangee';
+  const COMMUNITY_INVITE_URL = 'https://chat.whatsapp.com/K4VugYrTphGB19vCFFd86R';
 
   const getWhatsAppShareUrl = () => {
     const data = submittedData || formData;
@@ -950,7 +925,7 @@ export default function RsvpModal({ isOpen, onClose }) {
               <div role="status" aria-live="polite" className="flex items-center justify-between gap-2 rounded-2xl border border-[#41584C]/20 bg-[#EAE2D3]/60 px-3.5 py-2.5 text-xs text-[#343F35]">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#41584C] flex-shrink-0" />
-                  <span>RSVP received &amp; logged successfully.</span>
+                  <span>{submittedData.sheets_sync_status === 'pending' ? 'RSVP saved. Spreadsheet synchronization is pending.' : 'RSVP saved and verified in the wedding spreadsheet.'}</span>
                 </div>
                 <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/80 border border-[#C3A56B]/30 text-[#343F35] font-semibold">
                   {submittedData.rsvp_id || 'RSVP-2027'}
@@ -976,9 +951,10 @@ export default function RsvpModal({ isOpen, onClose }) {
                       </p>
 
                       <a
-                        href={COMMUNITY_INVITE_URL}
+                        href="https://chat.whatsapp.com/K4VugYrTphGB19vCFFd86R"
                         target="_blank"
                         rel="noopener noreferrer"
+                        aria-label="Join Our Wedding WhatsApp Community"
                         className="inline-flex items-center gap-2 mt-3 px-5 py-2.5 rounded-full bg-[#25D366] text-white text-xs font-sans font-semibold hover:bg-[#1EBE5D] transition-all shadow-xs"
                       >
                         <MessageCircle className="w-4 h-4" />
@@ -1022,7 +998,7 @@ export default function RsvpModal({ isOpen, onClose }) {
                   <div>
                     <span className="text-[10px] text-[#657968] uppercase block">Headcount</span>
                     <strong className="text-[#343F35] font-cormorant text-sm block">
-                      {submittedData.guest_count || 1} Guest(s)
+                      {submittedData.guest_count ?? 0} Guest(s)
                     </strong>
                   </div>
                   <div>

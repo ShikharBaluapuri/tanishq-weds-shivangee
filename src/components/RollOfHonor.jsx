@@ -4,15 +4,6 @@ import { Phone, MessageCircle, Lock } from 'lucide-react';
 import { BotanicalDivider } from './BespokeIcons';
 
 export default function RollOfHonor({ onOpenAdminModal }) {
-  const BEST_COMPLIMENTS = [
-    { title: 'Dr. Nidhi & Mr. Manish Baluapuri', relation: 'Proud Parents of the Groom' },
-    { title: 'Mrs. Kavita & Mr. Sapan Shrivastava', relation: 'Family Elder & Blessings' },
-    { title: 'Dr. Vidhi & Mr. Vivek Saxena', relation: 'Family Elder & Blessings' },
-    { title: 'Mrs. Purvi & Mr. Vishwa Anurag Saxena', relation: 'Family Elder & Blessings' },
-    { title: 'Mr. Shikhar Baluapuri', relation: 'Family & Best Man' },
-    { title: 'Ishaan Saxena', relation: 'Best Man' },
-    { title: 'Tanay Shrivastava', relation: 'Best Man' },
-  ];
 
   const CONTACTS = [
     { name: 'Manish Baluapuri', number: '9425006278', role: 'Main Host Contact' },
@@ -58,36 +49,6 @@ export default function RollOfHonor({ onOpenAdminModal }) {
           <BotanicalDivider className="w-full max-w-xs mx-auto my-5 text-[#C3A56B]" />
         </motion.div>
 
-        {/* Best Compliments From */}
-        <motion.div 
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-30px' }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-14"
-        >
-          <h4 className="text-center font-cormorant uppercase text-xs tracking-[0.25em] text-[#657968] mb-6 font-semibold">
-            — Best Compliments From —
-          </h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {BEST_COMPLIMENTS.map((member, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.2 }}
-                className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#C3A56B]/30 hover:border-[#C3A56B]/60 shadow-sm text-center transition-colors"
-              >
-                <div className="font-cormorant font-medium text-[#343F35] text-base sm:text-lg">
-                  {member.title}
-                </div>
-                <div className="text-[11px] font-sans text-[#657968] mt-0.5">
-                  {member.relation}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
 
         {/* Quick Contact Dock */}
         <motion.div 
